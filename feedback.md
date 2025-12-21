@@ -3,7 +3,7 @@
 -no need for both taskbar at bottom and the starting page with task and tell, unnecessary navigation methods.
 -replace AI images with a simple emoji type thing as is used throughout the site.
 -random box at top of rewards screen, remove or fill.
--don't say welcome back at top of start screen
+-don't say welcome back at top of start screen, say hello instead
 -center secret agents in the top bar and push log out to the far left or right
 -when guessing other peoples tells, THERE SHOULD BE NO OPTIONS, you should be given a type in box which an AI can then judge if you guessed correctly, wording does not matter, it's about meaning.
 -say something more about the team name winners on the rewards screen, maybe who it was, what it was?
