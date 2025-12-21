@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(npm install:*)",
+      "Bash(npm run db:seed:*)",
+      "Bash(npm run build:*)",
+      "Bash(timeout 5 npm start)",
+      "Bash(curl:*)",
+      "Bash(__NEW_LINE__ echo \"\")",
+      "Bash(cat:*)",
+      "Bash(python3:*)",
+      "Bash(pkill:*)"
+    ]
+  }
+}

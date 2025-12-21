@@ -1,0 +1,12 @@
+#feedback
+-opening page should be more interesting + tells you team name gives points
+-no need for both taskbar at bottom and the starting page with task and tell, unnecessary navigation methods.
+-replace AI images with a simple emoji type thing as is used throughout the site.
+-random box at top of rewards screen, remove or fill.
+-don't say welcome back at top of start screen
+-center secret agents in the top bar and push log out to the far left or right
+-when guessing other peoples tells, THERE SHOULD BE NO OPTIONS, you should be given a type in box which an AI can then judge if you guessed correctly, wording does not matter, it's about meaning.
+-say something more about the team name winners on the rewards screen, maybe who it was, what it was?
+-find a more compact way to present the guesses tab in the results, maybe correct guesses to and from each player
+-maybe come up with some fun awards for the people who come nearer the bottom and jemima and olivia depending on their situation. eg: chose the hardest tell (bravest), completed their mission the first time fastest (speedster)
+-you should need to specific equipment (e.g. ring) for tasks or tells. The only equipment should be easy to find in a normal house.
