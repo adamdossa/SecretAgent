@@ -28,6 +28,22 @@ router.get('/scores', (req, res) => {
     return res.status(400).json({ error: 'Game not finished yet' })
   }
 
+  // Get team name winner info
+  let teamNameWinner = null
+  if (gameState.winning_team_name_player_id) {
+    teamNameWinner = db.prepare(`
+      SELECT p.id, p.name, p.team_number as team, p.team_name_suggestion as suggestion
+      FROM players p WHERE p.id = ?
+    `).get(gameState.winning_team_name_player_id) as { id: number; name: string; team: number; suggestion: string } | undefined
+  }
+
+  // Get all team name suggestions
+  const allTeamNameSuggestions = db.prepare(`
+    SELECT p.name, p.team_number as team, p.team_name_suggestion as suggestion
+    FROM players p
+    WHERE p.team_name_suggestion IS NOT NULL AND p.team_name_suggestion != ''
+  `).all() as { name: string; team: number; suggestion: string }[]
+
   const players = db.prepare('SELECT id, name, team_number as team FROM players').all() as {
     id: number
     name: string
@@ -126,7 +142,12 @@ router.get('/scores', (req, res) => {
 
   teamScores.sort((a, b) => b.totalPoints - a.totalPoints)
 
-  res.json({ players: scores, teams: teamScores })
+  res.json({
+    players: scores,
+    teams: teamScores,
+    teamNameWinner,
+    allTeamNameSuggestions
+  })
 })
 
 // Get all reveals
@@ -169,17 +190,105 @@ router.get('/reveals', (req, res) => {
     SELECT
       g.name as guesserName,
       t.name as targetName,
-      o.option_text as guessedText,
+      tg.free_text_guess as guessText,
+      o.option_text as matchedOptionText,
+      actual.option_text as actualTellText,
       CASE WHEN st.tell_option_id = tg.guessed_tell_option_id THEN 1 ELSE 0 END as isCorrect
     FROM tell_guesses tg
     JOIN players g ON tg.guesser_id = g.id
     JOIN players t ON tg.target_player_id = t.id
-    JOIN tell_options o ON tg.guessed_tell_option_id = o.id
+    LEFT JOIN tell_options o ON tg.guessed_tell_option_id = o.id
     LEFT JOIN selected_tells st ON tg.target_player_id = st.player_id
+    LEFT JOIN tell_options actual ON st.tell_option_id = actual.id
     ORDER BY t.name, g.name
   `).all()
 
   res.json({ tells, missions, guesses })
+})
+
+// Get fun awards for all players
+router.get('/fun-awards', async (req, res) => {
+  try {
+    const gameState = db.prepare('SELECT status FROM game_state WHERE id = 1').get() as { status: string }
+
+    if (gameState.status !== 'finished') {
+      return res.status(400).json({ error: 'Game not finished yet' })
+    }
+
+    // Get all player stats
+    const players = db.prepare('SELECT id, name, team_number as team FROM players').all() as {
+      id: number
+      name: string
+      team: number
+    }[]
+
+    const playerStats = players.map(player => {
+      // Get mission completions
+      const missionCount = db.prepare(
+        'SELECT COUNT(*) as count FROM mission_completions WHERE player_id = ?'
+      ).get(player.id) as { count: number }
+
+      // Get correct guesses
+      const correctGuesses = db.prepare(`
+        SELECT COUNT(*) as count
+        FROM tell_guesses tg
+        JOIN selected_tells st ON tg.target_player_id = st.player_id
+        WHERE tg.guesser_id = ? AND tg.guessed_tell_option_id = st.tell_option_id
+      `).get(player.id) as { count: number }
+
+      // Get how many people guessed their tell correctly
+      const selectedTell = db.prepare('SELECT tell_option_id FROM selected_tells WHERE player_id = ?').get(player.id) as { tell_option_id: number } | undefined
+      let fooledCount = 0
+      if (selectedTell) {
+        const wrongGuesses = db.prepare(`
+          SELECT COUNT(*) as count FROM tell_guesses
+          WHERE target_player_id = ? AND guessed_tell_option_id != ?
+        `).get(player.id, selectedTell.tell_option_id) as { count: number }
+        fooledCount = wrongGuesses.count
+      }
+
+      return {
+        ...player,
+        missionCount: missionCount.count,
+        correctGuesses: correctGuesses.count,
+        fooledCount,
+        isYoungPlayer: YOUNG_PLAYERS.includes(player.name)
+      }
+    })
+
+    // Generate fun awards
+    const prompt = `You are awarding fun, silly prizes at a family Christmas game night. Here are the player stats:
+
+${playerStats.map(p => `- ${p.name}: ${p.missionCount} missions completed, ${p.correctGuesses} correct guess(es), fooled ${p.fooledCount} people${p.isYoungPlayer ? ' (YOUNG PLAYER - give extra encouragement!)' : ''}`).join('\n')}
+
+Create fun awards for EVERY player. Make them humorous, festive, and positive. Awards for lower performers should be funny and celebratory, not mean.
+
+Young players (${YOUNG_PLAYERS.join(', ')}) should get especially encouraging awards.
+
+Respond with valid JSON:
+{
+  "awards": [
+    {"name": "PlayerName", "award": "Award Title", "reason": "Fun 1-sentence reason"}
+  ]
+}
+
+Make sure EVERY player gets exactly one award. Be creative and funny!`
+
+    const response = await requireOpenAI().chat.completions.create({
+      model: MODELS.text,
+      messages: [{ role: 'user', content: prompt }],
+      response_format: { type: 'json_object' },
+    })
+
+    const content = response.choices[0].message.content
+    if (!content) throw new Error('No response from OpenAI')
+
+    const result = JSON.parse(content)
+    res.json(result)
+  } catch (error) {
+    console.error('Error generating fun awards:', error)
+    res.status(500).json({ error: 'Failed to generate fun awards' })
+  }
 })
 
 // Judge team names

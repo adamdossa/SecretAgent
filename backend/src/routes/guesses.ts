@@ -3,11 +3,11 @@ import { db } from '../config/database.js'
 
 const router = Router()
 
-// Submit or update a guess
+// Submit or update a guess (no AI judging - that happens at game end)
 router.post('/submit', (req, res) => {
-  const { guesserId, targetPlayerId, guessedOptionId } = req.body
+  const { guesserId, targetPlayerId, guessText } = req.body
 
-  if (!guesserId || !targetPlayerId || !guessedOptionId) {
+  if (!guesserId || !targetPlayerId || !guessText) {
     return res.status(400).json({ error: 'All fields required' })
   }
 
@@ -15,10 +15,13 @@ router.post('/submit', (req, res) => {
     return res.status(400).json({ error: 'Cannot guess your own tell' })
   }
 
-  // Verify the option belongs to the target player
-  const option = db.prepare('SELECT player_id FROM tell_options WHERE id = ?').get(guessedOptionId) as { player_id: number } | undefined
-  if (!option || option.player_id !== targetPlayerId) {
-    return res.status(400).json({ error: 'Invalid option for this player' })
+  // Verify target player has selected their tell
+  const selectedTell = db.prepare(
+    'SELECT id FROM selected_tells WHERE player_id = ?'
+  ).get(targetPlayerId)
+
+  if (!selectedTell) {
+    return res.status(400).json({ error: 'Target player has not selected their tell yet' })
   }
 
   // Check if guess already exists
@@ -27,16 +30,18 @@ router.post('/submit', (req, res) => {
   ).get(guesserId, targetPlayerId) as { id: number } | undefined
 
   if (existing) {
+    // Update existing guess (clear any previous AI judgment)
     db.prepare(`
       UPDATE tell_guesses
-      SET guessed_tell_option_id = ?, updated_at = datetime('now')
+      SET free_text_guess = ?, guessed_tell_option_id = NULL, ai_reasoning = NULL, updated_at = datetime('now')
       WHERE id = ?
-    `).run(guessedOptionId, existing.id)
+    `).run(guessText, existing.id)
   } else {
+    // Insert new guess
     db.prepare(`
-      INSERT INTO tell_guesses (guesser_id, target_player_id, guessed_tell_option_id)
+      INSERT INTO tell_guesses (guesser_id, target_player_id, free_text_guess)
       VALUES (?, ?, ?)
-    `).run(guesserId, targetPlayerId, guessedOptionId)
+    `).run(guesserId, targetPlayerId, guessText)
   }
 
   res.json({ success: true })
@@ -52,12 +57,14 @@ router.get('/mine/:playerId', (req, res) => {
       tg.target_player_id as targetPlayerId,
       p.name as targetPlayerName,
       tg.guessed_tell_option_id as guessedOptionId,
-      t.option_text as guessedText,
+      t.option_text as matchedOptionText,
+      tg.free_text_guess as guessText,
+      tg.ai_reasoning as aiReasoning,
       tg.guessed_at as guessedAt,
       tg.updated_at as updatedAt
     FROM tell_guesses tg
     JOIN players p ON tg.target_player_id = p.id
-    JOIN tell_options t ON tg.guessed_tell_option_id = t.id
+    LEFT JOIN tell_options t ON tg.guessed_tell_option_id = t.id
     WHERE tg.guesser_id = ?
     ORDER BY p.name
   `).all(playerId)
@@ -71,12 +78,14 @@ router.get('/about-me/:playerId', (req, res) => {
 
   const guesses = db.prepare(`
     SELECT
-      t.option_text as guessedText,
+      tg.free_text_guess as guessText,
+      t.option_text as matchedText,
+      tg.guessed_tell_option_id IS NOT NULL as wasMatched,
       COUNT(*) as count
     FROM tell_guesses tg
-    JOIN tell_options t ON tg.guessed_tell_option_id = t.id
+    LEFT JOIN tell_options t ON tg.guessed_tell_option_id = t.id
     WHERE tg.target_player_id = ?
-    GROUP BY tg.guessed_tell_option_id
+    GROUP BY tg.free_text_guess
     ORDER BY count DESC
   `).all(playerId)
 

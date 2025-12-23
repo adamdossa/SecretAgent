@@ -35,7 +35,7 @@ export default function DashboardPage() {
 
   if (tellLoading || missionLoading) {
     return (
-      <PageLayout title="Dashboard">
+      <PageLayout title="Secret Agents">
         <div className="flex justify-center py-12">
           <Spinner size="lg" />
         </div>
@@ -50,6 +50,7 @@ export default function DashboardPage() {
     return (
       <PageLayout title="Game Over!">
         <Card className="text-center py-8">
+          <div className="text-5xl mb-4">🎉</div>
           <h2 className="text-2xl font-bold text-christmas-red mb-4">
             The Game Has Ended!
           </h2>
@@ -58,9 +59,9 @@ export default function DashboardPage() {
           </p>
           <Link
             to="/prizes"
-            className="inline-block bg-christmas-red text-white px-6 py-3 rounded-lg font-semibold hover:bg-christmas-red-dark transition-colors"
+            className="inline-block bg-gradient-to-r from-christmas-red to-christmas-red-dark text-white px-8 py-3 rounded-xl font-semibold hover:shadow-lg transition-all active:scale-95"
           >
-            View Results
+            🏆 View Results
           </Link>
         </Card>
       </PageLayout>
@@ -70,115 +71,128 @@ export default function DashboardPage() {
   return (
     <PageLayout title="Secret Agents">
       <div className="space-y-4">
-        <Card className="text-center">
-          <p className="text-gray-600 mb-1">Welcome back,</p>
-          <h2 className="text-2xl font-bold text-christmas-red">{player?.name}</h2>
-          <p className="text-sm text-gray-500 mt-1">Team {player?.team}</p>
+        {/* Welcome card */}
+        <Card className="text-center bg-gradient-to-br from-white to-gray-50 border border-gray-100">
+          <p className="text-gray-500 mb-1">Hello,</p>
+          <h2 className="text-2xl font-bold text-christmas-red">{player?.name}! 👋</h2>
+          <div className="flex items-center justify-center gap-2 mt-2">
+            <span className="px-3 py-1 bg-christmas-red/10 text-christmas-red text-sm font-medium rounded-full">
+              Team {player?.team}
+            </span>
+          </div>
         </Card>
 
-        {!hasTell && (
+        {/* Tell section */}
+        {!hasTell ? (
           <Link to="/tells">
-            <Card hoverable className="border-2 border-dashed border-christmas-red/30">
+            <Card hoverable className="border-2 border-dashed border-christmas-red/40 hover:border-christmas-red transition-colors">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-christmas-red/10 rounded-full flex items-center justify-center">
-                  <svg className="w-6 h-6 text-christmas-red" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                  </svg>
+                <div className="w-14 h-14 bg-christmas-red/10 rounded-xl flex items-center justify-center text-2xl">
+                  👁️
                 </div>
-                <div>
-                  <h3 className="font-semibold text-gray-800">Choose Your Secret Tell</h3>
+                <div className="flex-1">
+                  <h3 className="font-bold text-gray-800">Choose Your Secret Tell</h3>
                   <p className="text-sm text-gray-500">Tap to select your secret behavior</p>
                 </div>
+                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
               </div>
             </Card>
           </Link>
-        )}
-
-        {hasTell && (
-          <Card>
+        ) : (
+          <Card className="border border-christmas-red/20 bg-gradient-to-br from-christmas-red/5 to-white">
             <div className="flex items-start gap-4">
-              {tellData.selected.imageUrl ? (
-                <img
-                  src={tellData.selected.imageUrl}
-                  alt="Tell reminder"
-                  className="w-16 h-16 rounded-lg object-cover"
-                />
-              ) : (
-                <div className="w-16 h-16 bg-christmas-red/10 rounded-lg flex items-center justify-center">
-                  <Spinner size="sm" />
-                </div>
-              )}
-              <div className="flex-1">
-                <h3 className="font-semibold text-christmas-green text-sm mb-1">Your Secret Tell</h3>
-                <p className="text-gray-700 text-sm">{tellData.selected.tellText}</p>
+              <div className="w-14 h-14 bg-christmas-red/10 rounded-xl flex items-center justify-center text-2xl flex-shrink-0">
+                👁️
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-bold text-christmas-red text-sm mb-1">Your Secret Tell</h3>
+                <p className="text-gray-700 text-sm leading-relaxed">{tellData.selected.tellText}</p>
               </div>
             </div>
           </Card>
         )}
 
-        {!hasMission && (
+        {/* Mission section */}
+        {!hasMission ? (
           <Link to="/missions">
-            <Card hoverable className="border-2 border-dashed border-christmas-green/30">
+            <Card hoverable className="border-2 border-dashed border-christmas-green/40 hover:border-christmas-green transition-colors">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-christmas-green/10 rounded-full flex items-center justify-center">
-                  <svg className="w-6 h-6 text-christmas-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                  </svg>
+                <div className="w-14 h-14 bg-christmas-green/10 rounded-xl flex items-center justify-center text-2xl">
+                  🎯
                 </div>
-                <div>
-                  <h3 className="font-semibold text-gray-800">Choose Your Secret Mission</h3>
+                <div className="flex-1">
+                  <h3 className="font-bold text-gray-800">Choose Your Secret Mission</h3>
                   <p className="text-sm text-gray-500">Tap to select your secret task</p>
                 </div>
+                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
               </div>
             </Card>
           </Link>
-        )}
-
-        {hasMission && (
-          <Card>
+        ) : (
+          <Card className="border border-christmas-green/20 bg-gradient-to-br from-christmas-green/5 to-white">
             <div className="flex items-start gap-4">
-              {missionData.selected.imageUrl ? (
-                <img
-                  src={missionData.selected.imageUrl}
-                  alt="Mission reminder"
-                  className="w-16 h-16 rounded-lg object-cover"
-                />
-              ) : (
-                <div className="w-16 h-16 bg-christmas-green/10 rounded-lg flex items-center justify-center">
-                  <Spinner size="sm" />
+              <div className="w-14 h-14 bg-christmas-green/10 rounded-xl flex items-center justify-center text-2xl flex-shrink-0">
+                🎯
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-bold text-christmas-green text-sm mb-1">Your Secret Mission</h3>
+                <p className="text-gray-700 text-sm leading-relaxed">{missionData.selected.missionText}</p>
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="px-2 py-1 bg-christmas-green/10 text-christmas-green text-xs font-bold rounded-full">
+                    ✓ {completionsData?.completions.length || 0} completed
+                  </span>
                 </div>
-              )}
-              <div className="flex-1">
-                <h3 className="font-semibold text-christmas-green text-sm mb-1">Your Secret Mission</h3>
-                <p className="text-gray-700 text-sm">{missionData.selected.missionText}</p>
-                <p className="text-christmas-red font-semibold mt-2">
-                  Completed: {completionsData?.completions.length || 0} times
-                </p>
               </div>
             </div>
           </Card>
         )}
 
+        {/* Guessing prompt - show when both tell and mission are selected */}
         {hasTell && hasMission && (
-          <Card className="bg-christmas-green/5">
-            <h3 className="font-semibold text-gray-800 mb-2">What to do now?</h3>
+          <Link to="/guessing">
+            <Card hoverable className="border-2 border-dashed border-christmas-gold/40 hover:border-christmas-gold transition-colors">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-christmas-gold/10 rounded-xl flex items-center justify-center text-2xl">
+                  🔍
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-bold text-gray-800">Guess Other Players' Tells</h3>
+                  <p className="text-sm text-gray-500">Watch and guess what others are doing!</p>
+                </div>
+                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </Card>
+          </Link>
+        )}
+
+        {/* Instructions */}
+        {hasTell && hasMission && (
+          <Card className="bg-gradient-to-br from-christmas-gold/10 to-white border border-christmas-gold/20">
+            <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
+              <span className="text-lg">📋</span> Your Mission Briefing
+            </h3>
             <ul className="text-sm text-gray-600 space-y-2">
-              <li className="flex items-center gap-2">
-                <span className="text-christmas-green">1.</span>
-                Perform your secret tell whenever triggered
+              <li className="flex items-start gap-3">
+                <span className="w-5 h-5 bg-christmas-red/10 text-christmas-red rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">1</span>
+                <span>Perform your secret tell whenever triggered - be subtle!</span>
               </li>
-              <li className="flex items-center gap-2">
-                <span className="text-christmas-green">2.</span>
-                Complete your secret mission with different people
+              <li className="flex items-start gap-3">
+                <span className="w-5 h-5 bg-christmas-green/10 text-christmas-green rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">2</span>
+                <span>Complete your mission with different family members</span>
               </li>
-              <li className="flex items-center gap-2">
-                <span className="text-christmas-green">3.</span>
-                Try to guess other players' secret tells
+              <li className="flex items-start gap-3">
+                <span className="w-5 h-5 bg-christmas-gold/20 text-christmas-gold rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">3</span>
+                <span>Try to spot and guess other players' secret tells</span>
               </li>
-              <li className="flex items-center gap-2">
-                <span className="text-christmas-green">4.</span>
-                Watch out - others are guessing yours!
+              <li className="flex items-start gap-3">
+                <span className="w-5 h-5 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">4</span>
+                <span>Watch out - they're trying to guess yours too!</span>
               </li>
             </ul>
           </Card>

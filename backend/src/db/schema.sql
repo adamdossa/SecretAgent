@@ -73,7 +73,9 @@ CREATE TABLE IF NOT EXISTS tell_guesses (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     guesser_id INTEGER NOT NULL REFERENCES players(id),
     target_player_id INTEGER NOT NULL REFERENCES players(id),
-    guessed_tell_option_id INTEGER NOT NULL REFERENCES tell_options(id),
+    guessed_tell_option_id INTEGER REFERENCES tell_options(id),
+    free_text_guess TEXT,
+    ai_reasoning TEXT,
     guessed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(guesser_id, target_player_id)

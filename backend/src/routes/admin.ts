@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { db } from '../config/database.js'
+import { requireOpenAI, MODELS } from '../config/openai.js'
 
 const router = Router()
 
@@ -58,15 +59,85 @@ router.post('/start-game', (req, res) => {
   res.json({ success: true })
 })
 
-// End the game
-router.post('/end-game', (req, res) => {
+// End the game and judge all guesses
+router.post('/end-game', async (req, res) => {
+  // First, mark game as finished
   db.prepare(`
     UPDATE game_state
     SET status = 'finished', ended_at = datetime('now')
     WHERE id = 1
   `).run()
 
-  res.json({ success: true })
+  // Get all guesses that need judging
+  const guesses = db.prepare(`
+    SELECT
+      tg.id as guessId,
+      tg.free_text_guess as guessText,
+      tg.target_player_id as targetPlayerId,
+      p.name as targetName,
+      t.option_text as actualTell,
+      st.tell_option_id as correctOptionId
+    FROM tell_guesses tg
+    JOIN players p ON tg.target_player_id = p.id
+    JOIN selected_tells st ON tg.target_player_id = st.player_id
+    JOIN tell_options t ON st.tell_option_id = t.id
+    WHERE tg.free_text_guess IS NOT NULL
+  `).all() as {
+    guessId: number
+    guessText: string
+    targetPlayerId: number
+    targetName: string
+    actualTell: string
+    correctOptionId: number
+  }[]
+
+  // Judge each guess with AI
+  const updateGuess = db.prepare(`
+    UPDATE tell_guesses
+    SET guessed_tell_option_id = ?, ai_reasoning = ?
+    WHERE id = ?
+  `)
+
+  let judgedCount = 0
+  for (const guess of guesses) {
+    try {
+      const prompt = `You are a judge in a fun family Christmas game. A player guessed what another player's secret "tell" (subtle behavior) is.
+
+${guess.targetName}'s ACTUAL secret tell was: "${guess.actualTell}"
+
+The guesser wrote: "${guess.guessText}"
+
+Determine if the guess correctly identifies the same behavior/action. It doesn't need to be word-for-word - look for whether they've identified the core behavior.
+
+Respond with valid JSON:
+{
+  "isCorrect": <true or false>,
+  "reasoning": "<Brief, fun 1-sentence explanation>"
+}
+
+Be fair but generous - if they captured the essence, count it as correct.`
+
+      const response = await requireOpenAI().chat.completions.create({
+        model: MODELS.text,
+        messages: [{ role: 'user', content: prompt }],
+        response_format: { type: 'json_object' },
+      })
+
+      const content = response.choices[0].message.content
+      if (content) {
+        const result = JSON.parse(content)
+        const matchedOptionId = result.isCorrect ? guess.correctOptionId : null
+        updateGuess.run(matchedOptionId, result.reasoning || '', guess.guessId)
+        judgedCount++
+      }
+    } catch (error) {
+      console.error(`Error judging guess ${guess.guessId}:`, error)
+      updateGuess.run(null, 'AI judging failed', guess.guessId)
+    }
+  }
+
+  console.log(`Judged ${judgedCount} guesses`)
+  res.json({ success: true, judgedGuesses: judgedCount })
 })
 
 // Restart the game

@@ -22,7 +22,6 @@ export default function TellsPage() {
     queryKey: ['selectedTell', player?.id],
     queryFn: () => tellsApi.getSelected(player!.id),
     enabled: !!player,
-    refetchInterval: 3000,
   })
 
   const generateMutation = useMutation({
@@ -38,16 +37,6 @@ export default function TellsPage() {
       queryClient.invalidateQueries({ queryKey: ['selectedTell', player?.id] })
     },
   })
-
-  const handleGenerate = () => {
-    generateMutation.mutate()
-  }
-
-  const handleSelect = () => {
-    if (selectedOption) {
-      selectMutation.mutate(selectedOption)
-    }
-  }
 
   const isLoading = optionsLoading || selectedLoading
 
@@ -66,31 +55,29 @@ export default function TellsPage() {
     return (
       <PageLayout title="Your Secret Tell" showBack>
         <div className="space-y-4">
-          <Card className="text-center">
-            {selectedData.selected.imageUrl ? (
-              <img
-                src={selectedData.selected.imageUrl}
-                alt="Tell reminder"
-                className="w-32 h-32 mx-auto rounded-xl object-cover mb-4"
-              />
-            ) : (
-              <div className="w-32 h-32 mx-auto bg-christmas-red/10 rounded-xl flex items-center justify-center mb-4">
-                <div className="text-center">
-                  <Spinner size="md" />
-                  <p className="text-xs text-gray-500 mt-2">Generating image...</p>
-                </div>
-              </div>
-            )}
-            <h2 className="text-lg font-semibold text-gray-800 mb-2">Remember to:</h2>
-            <p className="text-gray-700">{selectedData.selected.tellText}</p>
+          <Card className="text-center bg-gradient-to-br from-christmas-red/5 to-white border border-christmas-red/20">
+            <div className="text-6xl mb-4">👁️</div>
+            <h2 className="text-lg font-bold text-gray-800 mb-3">Remember to:</h2>
+            <p className="text-gray-700 leading-relaxed">{selectedData.selected.tellText}</p>
           </Card>
 
-          <Card className="bg-christmas-green/5">
-            <h3 className="font-semibold text-gray-800 mb-2">Tips</h3>
-            <ul className="text-sm text-gray-600 space-y-1">
-              <li>- Be subtle! Don't make it too obvious</li>
-              <li>- Do it consistently when triggered</li>
-              <li>- Others are watching and trying to guess!</li>
+          <Card className="bg-gradient-to-br from-christmas-gold/10 to-white border border-christmas-gold/20">
+            <h3 className="font-bold text-gray-800 mb-2 flex items-center gap-2">
+              <span>💡</span> Tips for Success
+            </h3>
+            <ul className="text-sm text-gray-600 space-y-2">
+              <li className="flex items-start gap-2">
+                <span className="text-christmas-green">•</span>
+                <span>Be subtle! Don't make it too obvious</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-christmas-green">•</span>
+                <span>Do it consistently when triggered</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-christmas-green">•</span>
+                <span>Others are watching and trying to guess!</span>
+              </li>
             </ul>
           </Card>
         </div>
@@ -103,22 +90,17 @@ export default function TellsPage() {
     return (
       <PageLayout title="Secret Tell" showBack>
         <div className="text-center py-8">
-          <div className="w-20 h-20 bg-christmas-red/10 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-10 h-10 text-christmas-red" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-            </svg>
-          </div>
-          <h2 className="text-xl font-semibold text-gray-800 mb-2">Generate Your Secret Tells</h2>
+          <div className="text-6xl mb-6">👁️</div>
+          <h2 className="text-xl font-bold text-gray-800 mb-2">Generate Your Secret Tells</h2>
           <p className="text-gray-600 mb-6">
             The AI will create 3 unique secret tells for you to choose from.
           </p>
           <Button
-            onClick={handleGenerate}
+            onClick={() => generateMutation.mutate()}
             loading={generateMutation.isPending}
             size="lg"
           >
-            Generate Options
+            🎲 Generate Options
           </Button>
         </div>
       </PageLayout>
@@ -133,40 +115,43 @@ export default function TellsPage() {
           Select one secret tell to perform throughout the game:
         </p>
 
-        {optionsData.options.map((option: any) => (
+        {optionsData.options.map((option: any, index: number) => (
           <Card
             key={option.id}
             hoverable
             selected={selectedOption === option.id}
             onClick={() => setSelectedOption(option.id)}
+            className="transition-all"
           >
             <div className="flex items-start gap-3">
               <div
-                className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors ${
+                className={`w-8 h-8 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
                   selectedOption === option.id
-                    ? 'border-christmas-red bg-christmas-red'
+                    ? 'border-christmas-red bg-christmas-red text-white'
                     : 'border-gray-300'
                 }`}
               >
-                {selectedOption === option.id && (
-                  <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                {selectedOption === option.id ? (
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                   </svg>
+                ) : (
+                  <span className="text-gray-400 font-medium text-sm">{index + 1}</span>
                 )}
               </div>
-              <p className="text-gray-700">{option.option_text}</p>
+              <p className="text-gray-700 leading-relaxed">{option.option_text}</p>
             </div>
           </Card>
         ))}
 
         <Button
-          onClick={handleSelect}
+          onClick={() => selectedOption && selectMutation.mutate(selectedOption)}
           loading={selectMutation.isPending}
           disabled={!selectedOption}
           className="w-full"
           size="lg"
         >
-          Confirm Selection
+          ✓ Confirm Selection
         </Button>
       </div>
     </PageLayout>

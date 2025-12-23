@@ -69,8 +69,8 @@ export const missionsApi = {
 
 // Guesses API
 export const guessesApi = {
-  submit: (guesserId: number, targetPlayerId: number, guessedOptionId: number) =>
-    api.post('/guesses/submit', { guesserId, targetPlayerId, guessedOptionId }),
+  submit: (guesserId: number, targetPlayerId: number, guessText: string) =>
+    api.post<{ success: boolean }>('/guesses/submit', { guesserId, targetPlayerId, guessText }),
   getMine: (playerId: number) => api.get<{ guesses: any[] }>(`/guesses/mine/${playerId}`),
   getAboutMe: (playerId: number) => api.get<{ guesses: any[] }>(`/guesses/about-me/${playerId}`),
 }
@@ -85,7 +85,8 @@ export const adminApi = {
 
 // Prizes API
 export const prizesApi = {
-  getScores: () => api.get<{ players: any[]; teams: any[] }>('/prizes/scores'),
+  getScores: () => api.get<{ players: any[]; teams: any[]; teamNameWinner: any; allTeamNameSuggestions: any[] }>('/prizes/scores'),
   getReveals: () => api.get<{ tells: any[]; missions: any[]; guesses: any[] }>('/prizes/reveals'),
   judgeTeamNames: () => api.post<{ winner: any; reasoning: string }>('/prizes/judge-team-names'),
+  getFunAwards: () => api.get<{ awards: { name: string; award: string; reason: string }[] }>('/prizes/fun-awards'),
 }

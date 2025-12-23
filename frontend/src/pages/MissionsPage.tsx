@@ -78,27 +78,16 @@ export default function MissionsPage() {
     return (
       <PageLayout title="Your Secret Mission" showBack>
         <div className="space-y-4">
-          <Card className="text-center">
-            {selectedData.selected.imageUrl ? (
-              <img
-                src={selectedData.selected.imageUrl}
-                alt="Mission reminder"
-                className="w-32 h-32 mx-auto rounded-xl object-cover mb-4"
-              />
-            ) : (
-              <div className="w-32 h-32 mx-auto bg-christmas-green/10 rounded-xl flex items-center justify-center mb-4">
-                <div className="text-center">
-                  <Spinner size="md" />
-                  <p className="text-xs text-gray-500 mt-2">Generating image...</p>
-                </div>
-              </div>
-            )}
-            <h2 className="text-lg font-semibold text-gray-800 mb-2">Your Mission:</h2>
-            <p className="text-gray-700">{selectedData.selected.missionText}</p>
+          <Card className="text-center bg-gradient-to-br from-christmas-green/5 to-white border border-christmas-green/20">
+            <div className="text-6xl mb-4">🎯</div>
+            <h2 className="text-lg font-bold text-gray-800 mb-3">Your Mission:</h2>
+            <p className="text-gray-700 leading-relaxed">{selectedData.selected.missionText}</p>
           </Card>
 
-          <Card>
-            <h3 className="font-semibold text-gray-800 mb-3">Record Completion</h3>
+          <Card className="border border-gray-100">
+            <h3 className="font-bold text-gray-800 mb-2 flex items-center gap-2">
+              <span>📝</span> Record Completion
+            </h3>
             <p className="text-sm text-gray-600 mb-3">
               Who did you complete this mission with?
             </p>
@@ -110,9 +99,9 @@ export default function MissionsPage() {
                     <button
                       key={p.id}
                       onClick={() => setSelectedPlayer(p.id)}
-                      className={`p-3 rounded-lg border-2 transition-all ${
+                      className={`p-3 rounded-lg border-2 transition-all font-medium ${
                         selectedPlayer === p.id
-                          ? 'border-christmas-green bg-christmas-green/10'
+                          ? 'border-christmas-green bg-christmas-green/10 text-christmas-green'
                           : 'border-gray-200 hover:border-christmas-green/50'
                       }`}
                     >
@@ -127,31 +116,34 @@ export default function MissionsPage() {
                   variant="secondary"
                   className="w-full"
                 >
-                  Record Completion
+                  ✓ Record Completion
                 </Button>
               </>
             ) : (
-              <p className="text-gray-500 text-center py-4">
-                You've completed missions with everyone!
-              </p>
+              <div className="text-center py-4">
+                <div className="text-4xl mb-2">🎉</div>
+                <p className="text-gray-600 font-medium">
+                  You've completed missions with everyone!
+                </p>
+              </div>
             )}
           </Card>
 
-          <Card>
-            <h3 className="font-semibold text-gray-800 mb-3">
-              Completions ({completionsData?.completions.length || 0})
+          <Card className="border border-christmas-gold/20 bg-gradient-to-br from-christmas-gold/10 to-white">
+            <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
+              <span>⭐</span> Completions ({completionsData?.completions.length || 0})
             </h3>
             {completionsData?.completions && completionsData.completions.length > 0 ? (
               <ul className="space-y-2">
                 {completionsData.completions.map((c: any) => (
                   <li key={c.id} className="flex items-center gap-2 text-sm">
-                    <span className="text-christmas-green">+1</span>
-                    <span>with {c.involved_player_name}</span>
+                    <span className="w-6 h-6 bg-christmas-green/20 text-christmas-green rounded-full flex items-center justify-center text-xs font-bold">✓</span>
+                    <span className="text-gray-700">with {c.involved_player_name}</span>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-gray-500 text-sm">No completions yet</p>
+              <p className="text-gray-500 text-sm">No completions yet - get started!</p>
             )}
           </Card>
         </div>
@@ -164,12 +156,8 @@ export default function MissionsPage() {
     return (
       <PageLayout title="Secret Mission" showBack>
         <div className="text-center py-8">
-          <div className="w-20 h-20 bg-christmas-green/10 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-10 h-10 text-christmas-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-            </svg>
-          </div>
-          <h2 className="text-xl font-semibold text-gray-800 mb-2">Generate Your Secret Missions</h2>
+          <div className="text-6xl mb-6">🎯</div>
+          <h2 className="text-xl font-bold text-gray-800 mb-2">Generate Your Secret Missions</h2>
           <p className="text-gray-600 mb-6">
             The AI will create 3 unique secret missions for you to choose from.
           </p>
@@ -179,7 +167,7 @@ export default function MissionsPage() {
             size="lg"
             variant="secondary"
           >
-            Generate Options
+            🎲 Generate Options
           </Button>
         </div>
       </PageLayout>
@@ -194,28 +182,31 @@ export default function MissionsPage() {
           Select one secret mission to complete throughout the game:
         </p>
 
-        {optionsData.options.map((option: any) => (
+        {optionsData.options.map((option: any, index: number) => (
           <Card
             key={option.id}
             hoverable
             selected={selectedOption === option.id}
             onClick={() => setSelectedOption(option.id)}
+            className="transition-all"
           >
             <div className="flex items-start gap-3">
               <div
-                className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors ${
+                className={`w-8 h-8 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
                   selectedOption === option.id
-                    ? 'border-christmas-green bg-christmas-green'
+                    ? 'border-christmas-green bg-christmas-green text-white'
                     : 'border-gray-300'
                 }`}
               >
-                {selectedOption === option.id && (
-                  <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                {selectedOption === option.id ? (
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                   </svg>
+                ) : (
+                  <span className="text-gray-400 font-medium text-sm">{index + 1}</span>
                 )}
               </div>
-              <p className="text-gray-700">{option.option_text}</p>
+              <p className="text-gray-700 leading-relaxed">{option.option_text}</p>
             </div>
           </Card>
         ))}
@@ -228,7 +219,7 @@ export default function MissionsPage() {
           size="lg"
           variant="secondary"
         >
-          Confirm Selection
+          ✓ Confirm Selection
         </Button>
       </div>
     </PageLayout>

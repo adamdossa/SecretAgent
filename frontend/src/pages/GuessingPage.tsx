@@ -1,20 +1,30 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '../stores/authStore'
-import { tellsApi, guessesApi } from '../api/client'
+import { guessesApi, gameApi } from '../api/client'
 import PageLayout from '../components/layout/PageLayout'
 import Card from '../components/ui/Card'
+import Button from '../components/ui/Button'
 import Spinner from '../components/ui/Spinner'
+import Input from '../components/ui/Input'
+
+interface Player {
+  id: number
+  name: string
+  team: number
+  hasTell: boolean
+}
 
 export default function GuessingPage() {
   const { player } = useAuthStore()
   const queryClient = useQueryClient()
   const [expandedPlayer, setExpandedPlayer] = useState<number | null>(null)
+  const [guessInputs, setGuessInputs] = useState<Record<number, string>>({})
+  const [justSubmitted, setJustSubmitted] = useState<number | null>(null)
 
   const { data: playersData, isLoading: playersLoading } = useQuery({
-    queryKey: ['allTellOptions', player?.id],
-    queryFn: () => tellsApi.getAllOptions(player!.id),
-    enabled: !!player,
+    queryKey: ['gamePlayers'],
+    queryFn: gameApi.getPlayers,
   })
 
   const { data: myGuesses } = useQuery({
@@ -23,17 +33,15 @@ export default function GuessingPage() {
     enabled: !!player,
   })
 
-  const { data: guessesAboutMe } = useQuery({
-    queryKey: ['guessesAboutMe', player?.id],
-    queryFn: () => guessesApi.getAboutMe(player!.id),
-    enabled: !!player,
-  })
-
   const submitMutation = useMutation({
-    mutationFn: ({ targetPlayerId, guessedOptionId }: { targetPlayerId: number; guessedOptionId: number }) =>
-      guessesApi.submit(player!.id, targetPlayerId, guessedOptionId),
-    onSuccess: () => {
+    mutationFn: ({ targetPlayerId, guessText }: { targetPlayerId: number; guessText: string }) =>
+      guessesApi.submit(player!.id, targetPlayerId, guessText),
+    onSuccess: (_, variables) => {
+      setJustSubmitted(variables.targetPlayerId)
       queryClient.invalidateQueries({ queryKey: ['myGuesses', player?.id] })
+      setGuessInputs(prev => ({ ...prev, [variables.targetPlayerId]: '' }))
+      // Clear the "just submitted" indicator after a few seconds
+      setTimeout(() => setJustSubmitted(null), 3000)
     },
   })
 
@@ -47,43 +55,65 @@ export default function GuessingPage() {
     )
   }
 
+  // Filter to other players, separate by whether they have a tell
+  const otherPlayers = playersData?.players?.filter((p: Player) => p.id !== player?.id) || []
+  const readyPlayers = otherPlayers.filter((p: Player) => p.hasTell)
+  const notReadyPlayers = otherPlayers.filter((p: Player) => !p.hasTell)
+
   const getMyGuessForPlayer = (targetId: number) => {
-    return myGuesses?.guesses.find((g: any) => g.targetPlayerId === targetId)
+    return myGuesses?.guesses?.find((g: any) => g.targetPlayerId === targetId)
+  }
+
+  const handleSubmit = (targetPlayerId: number) => {
+    const guessText = guessInputs[targetPlayerId]?.trim()
+    if (guessText) {
+      submitMutation.mutate({ targetPlayerId, guessText })
+    }
   }
 
   return (
     <PageLayout title="Guess Tells" showBack>
       <div className="space-y-4">
-        <p className="text-gray-600 text-center text-sm">
-          Try to guess what each player's secret tell is!
-        </p>
+        <Card className="bg-gradient-to-br from-christmas-red/5 to-white border border-christmas-red/20">
+          <div className="flex items-start gap-3">
+            <div className="text-3xl">🔍</div>
+            <div>
+              <h3 className="font-bold text-gray-800 mb-1">How to Guess</h3>
+              <p className="text-sm text-gray-600">
+                Watch other players and describe what you think their secret tell is. Results are revealed when the game ends!
+              </p>
+            </div>
+          </div>
+        </Card>
 
-        {playersData?.players && playersData.players.length > 0 ? (
-          playersData.players.map((targetPlayer: any) => {
+        {/* Players ready to be guessed */}
+        {readyPlayers.length > 0 ? (
+          readyPlayers.map((targetPlayer: Player) => {
             const myGuess = getMyGuessForPlayer(targetPlayer.id)
             const isExpanded = expandedPlayer === targetPlayer.id
+            const wasJustSubmitted = justSubmitted === targetPlayer.id
 
             return (
-              <Card key={targetPlayer.id}>
+              <Card key={targetPlayer.id} className="overflow-hidden">
                 <button
                   className="w-full text-left"
                   onClick={() => setExpandedPlayer(isExpanded ? null : targetPlayer.id)}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-christmas-red/10 rounded-full flex items-center justify-center">
-                        <span className="text-christmas-red font-semibold">
+                      <div className="w-12 h-12 bg-gradient-to-br from-christmas-red to-christmas-red-dark rounded-full flex items-center justify-center">
+                        <span className="text-white font-bold text-lg">
                           {targetPlayer.name[0]}
                         </span>
                       </div>
                       <div>
-                        <h3 className="font-semibold text-gray-800">{targetPlayer.name}</h3>
+                        <h3 className="font-bold text-gray-800">{targetPlayer.name}</h3>
                         <p className="text-xs text-gray-500">Team {targetPlayer.team}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
                       {myGuess && (
-                        <span className="text-xs bg-christmas-green/10 text-christmas-green px-2 py-1 rounded">
+                        <span className="text-xs px-2 py-1 rounded-full font-medium bg-christmas-green/10 text-christmas-green">
                           Guessed
                         </span>
                       )}
@@ -100,74 +130,81 @@ export default function GuessingPage() {
                 </button>
 
                 {isExpanded && (
-                  <div className="mt-4 pt-4 border-t border-gray-100 space-y-2">
-                    <p className="text-sm text-gray-600 mb-3">
-                      Which do you think is {targetPlayer.name}'s secret tell?
-                    </p>
-                    {targetPlayer.options.map((option: any) => (
-                      <button
-                        key={option.id}
-                        onClick={() => {
-                          submitMutation.mutate({
-                            targetPlayerId: targetPlayer.id,
-                            guessedOptionId: option.id,
-                          })
-                        }}
-                        disabled={submitMutation.isPending}
-                        className={`w-full text-left p-3 rounded-lg border-2 transition-all ${
-                          myGuess?.guessedOptionId === option.id
-                            ? 'border-christmas-green bg-christmas-green/10'
-                            : 'border-gray-200 hover:border-christmas-red/50'
-                        }`}
-                      >
-                        <div className="flex items-start gap-2">
-                          <div
-                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                              myGuess?.guessedOptionId === option.id
-                                ? 'border-christmas-green bg-christmas-green'
-                                : 'border-gray-300'
-                            }`}
-                          >
-                            {myGuess?.guessedOptionId === option.id && (
-                              <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                              </svg>
-                            )}
-                          </div>
-                          <span className="text-sm text-gray-700">{option.text}</span>
-                        </div>
-                      </button>
-                    ))}
+                  <div className="mt-4 pt-4 border-t border-gray-100 space-y-4">
+                    {myGuess && (
+                      <div className="bg-gray-50 rounded-lg p-3">
+                        <p className="text-xs text-gray-500 mb-1">Your current guess:</p>
+                        <p className="text-sm text-gray-700 italic">"{myGuess.guessText}"</p>
+                      </div>
+                    )}
+
+                    <div>
+                      <Input
+                        label={myGuess ? 'Update your guess' : `What is ${targetPlayer.name}'s secret tell?`}
+                        placeholder="e.g. They scratch their nose when..."
+                        value={guessInputs[targetPlayer.id] || ''}
+                        onChange={(e) => setGuessInputs(prev => ({
+                          ...prev,
+                          [targetPlayer.id]: e.target.value
+                        }))}
+                      />
+                    </div>
+
+                    <Button
+                      onClick={() => handleSubmit(targetPlayer.id)}
+                      loading={submitMutation.isPending && submitMutation.variables?.targetPlayerId === targetPlayer.id}
+                      disabled={!guessInputs[targetPlayer.id]?.trim()}
+                      className="w-full"
+                    >
+                      🎯 {myGuess ? 'Update Guess' : 'Submit Guess'}
+                    </Button>
+
+                    {wasJustSubmitted && (
+                      <div className="rounded-lg p-3 bg-christmas-green/10 border border-christmas-green/30 text-center">
+                        <p className="text-sm text-christmas-green font-medium">
+                          ✓ Guess saved! Results revealed at game end.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
               </Card>
             )
           })
         ) : (
-          <Card className="text-center py-8">
-            <p className="text-gray-500">
-              No other players have selected their tells yet.
+          <Card className="text-center py-6">
+            <div className="text-4xl mb-3">⏳</div>
+            <p className="text-gray-600 font-medium">No players ready yet</p>
+            <p className="text-gray-500 text-sm mt-1">
+              Waiting for others to select their secret tells...
             </p>
           </Card>
         )}
 
-        <Card className="mt-6">
-          <h3 className="font-semibold text-gray-800 mb-3">Guesses About You</h3>
-          {guessesAboutMe?.guesses && guessesAboutMe.guesses.length > 0 ? (
-            <ul className="space-y-2">
-              {guessesAboutMe.guesses.map((g: any, i: number) => (
-                <li key={i} className="text-sm text-gray-600">
-                  <span className="text-christmas-red font-medium">{g.count}</span>
-                  {' '}player{g.count > 1 ? 's' : ''} think{g.count === 1 ? 's' : ''} your tell is:
-                  <br />
-                  <span className="italic">"{g.guessedText}"</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-gray-500 text-sm">No guesses about you yet</p>
-          )}
-        </Card>
+        {/* Players not ready */}
+        {notReadyPlayers.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-xs text-gray-500 font-medium uppercase tracking-wide px-1">
+              Not ready yet ({notReadyPlayers.length})
+            </p>
+            {notReadyPlayers.map((targetPlayer: Player) => (
+              <Card key={targetPlayer.id} className="opacity-50">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
+                    <span className="text-gray-500 font-bold">
+                      {targetPlayer.name[0]}
+                    </span>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-medium text-gray-500">{targetPlayer.name}</h3>
+                    <p className="text-xs text-gray-400">Hasn't selected their tell yet</p>
+                  </div>
+                  <span className="text-xs text-gray-400">⏳</span>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
     </PageLayout>
   )

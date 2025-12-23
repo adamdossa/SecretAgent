@@ -62,6 +62,7 @@ No text in the image. Simple and clear imagery that hints at the mission.`
     response_format: 'b64_json',
   })
 
+  if (!response.data || !response.data[0]) throw new Error('No image response')
   const imageData = response.data[0].b64_json
   if (!imageData) throw new Error('No image generated')
 

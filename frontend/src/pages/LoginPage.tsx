@@ -48,21 +48,28 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-christmas-red flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">
+    <div className="min-h-screen bg-gradient-to-b from-christmas-red to-christmas-red-dark flex flex-col items-center justify-center p-4 relative overflow-hidden">
+      {/* Decorative elements */}
+      <div className="absolute top-10 left-10 text-6xl opacity-20 animate-pulse">✨</div>
+      <div className="absolute top-20 right-16 text-4xl opacity-20 animate-pulse delay-300">🎄</div>
+      <div className="absolute bottom-32 left-8 text-5xl opacity-20 animate-pulse delay-500">🎁</div>
+      <div className="absolute bottom-20 right-12 text-4xl opacity-20 animate-pulse delay-700">⭐</div>
+
+      <div className="w-full max-w-sm relative z-10">
+        <div className="text-center mb-6">
+          <div className="text-6xl mb-4">🕵️</div>
+          <h1 className="text-4xl font-bold text-white mb-1 tracking-tight">
             Silver Leigh
           </h1>
-          <h2 className="text-xl text-white/90">
+          <h2 className="text-2xl font-semibold text-christmas-gold">
             Secret Agents
           </h2>
-          <p className="text-white/70 mt-2 text-sm">
+          <p className="text-white/80 mt-3 text-sm">
             Christmas 2024
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-2xl p-6 shadow-xl space-y-4">
+        <form onSubmit={handleSubmit} className="bg-white rounded-2xl p-6 shadow-2xl space-y-4">
           <Select
             label="Who are you?"
             value={name}
@@ -71,23 +78,28 @@ export default function LoginPage() {
             placeholder="Select your name..."
           />
 
-          <Input
-            label="Team Name Suggestion"
-            placeholder="Your creative team name idea..."
-            value={teamNameSuggestion}
-            onChange={(e) => setTeamNameSuggestion(e.target.value)}
-          />
+          <div>
+            <Input
+              label="Suggest a Team Name"
+              placeholder="e.g. The Mince Pie Spies..."
+              value={teamNameSuggestion}
+              onChange={(e) => setTeamNameSuggestion(e.target.value)}
+            />
+            <p className="text-xs text-christmas-green mt-1 font-medium">
+              🏆 Best team name wins a bonus point!
+            </p>
+          </div>
 
           <Input
-            label="Password"
+            label="Secret Password"
             type="password"
-            placeholder="Enter the secret password"
+            placeholder="Enter the password..."
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
 
           {error && (
-            <p className="text-red-500 text-sm text-center">{error}</p>
+            <p className="text-red-500 text-sm text-center font-medium">{error}</p>
           )}
 
           <Button
@@ -96,9 +108,15 @@ export default function LoginPage() {
             size="lg"
             loading={loading}
           >
-            Join the Game
+            🎅 Join the Game
           </Button>
         </form>
+
+        <div className="mt-6 text-center">
+          <p className="text-white/60 text-xs">
+            Complete secret missions • Spot secret tells • Win prizes!
+          </p>
+        </div>
       </div>
     </div>
   )
