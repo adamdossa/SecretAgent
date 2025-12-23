@@ -87,12 +87,12 @@ router.get('/scores', (req, res) => {
     const selectedTell = db.prepare('SELECT tell_option_id FROM selected_tells WHERE player_id = ?').get(player.id) as { tell_option_id: number } | undefined
 
     if (selectedTell) {
+      // Count wrong guesses: either NULL (judged incorrect) or different option ID
       const wrongGuesses = db.prepare(`
         SELECT COUNT(*) as count FROM tell_guesses
         WHERE target_player_id = ?
-        AND guessed_tell_option_id != ?
+        AND (guessed_tell_option_id IS NULL OR guessed_tell_option_id != ?)
       `).get(player.id, selectedTell.tell_option_id) as { count: number }
-      console.log("Lizzy look at me!!! ", wrongGuesses)
 
       const stealthBonus = Math.ceil(wrongGuesses.count / 2)
       if (stealthBonus > 0) {
