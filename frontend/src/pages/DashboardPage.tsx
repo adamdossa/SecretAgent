@@ -41,7 +41,7 @@ function ScoringGuide() {
             <span className="text-christmas-red">🕵️</span>
             <div>
               <span className="font-medium text-gray-700">Stay hidden</span>
-              <span className="text-gray-500"> — +1 per wrong guess, +0.5 per no guess</span>
+              <span className="text-gray-500"> — +0.5 per player who doesn't guess correctly</span>
             </div>
           </div>
           <div className="flex items-start gap-2">

@@ -108,17 +108,13 @@ router.get('/scores', (req, res) => {
       // Players who didn't guess at all
       const noGuessCount = totalOtherPlayers.count - playersWhoGuessed.count
 
-      // Stealth bonus: 1 point per incorrect guess, 0.5 points per no guess
-      const incorrectPoints = wrongGuesses.count
-      const noGuessPoints = noGuessCount * 0.5
-      const stealthBonus = incorrectPoints + noGuessPoints
+      // Stealth bonus: 0.5 points per incorrect guess or no guess
+      const stealthBonus = (wrongGuesses.count + noGuessCount) * 0.5
 
       if (stealthBonus > 0) {
         tellPoints += stealthBonus
-        const parts = []
-        if (wrongGuesses.count > 0) parts.push(`${wrongGuesses.count} wrong`)
-        if (noGuessCount > 0) parts.push(`${noGuessCount} no guess`)
-        breakdown.push(`+${stealthBonus} stealth (${parts.join(', ')})`)
+        const fooledCount = wrongGuesses.count + noGuessCount
+        breakdown.push(`+${stealthBonus} stealth (${fooledCount} fooled)`)
       }
     }
 
@@ -137,7 +133,10 @@ router.get('/scores', (req, res) => {
       teamNamePoints = 2
       breakdown.push(`+2 winning team name`)
     }
-    console.log(player.name, breakdown);
+
+    // Round up all points to nearest whole number
+    tellPoints = Math.ceil(tellPoints)
+    const totalPoints = Math.ceil(tellPoints + missionPoints + teamNamePoints)
 
     return {
       id: player.id,
@@ -146,7 +145,7 @@ router.get('/scores', (req, res) => {
       tellPoints,
       missionPoints,
       teamNamePoints,
-      totalPoints: tellPoints + missionPoints + teamNamePoints,
+      totalPoints,
       breakdown,
     }
   })
