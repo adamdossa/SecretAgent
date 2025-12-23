@@ -232,7 +232,7 @@ export default function PrizesPage() {
                       <div className="flex gap-2 text-xs text-gray-500">
                         <span>👁️ {player.tellPoints}</span>
                         <span>🎯 {player.missionPoints}</span>
-                        {player.teamNamePoints > 0 && <span>📝 1</span>}
+                        {player.teamNamePoints > 0 && <span>📝 2</span>}
                       </div>
                     </div>
                     <div className="text-xl font-bold text-christmas-red">

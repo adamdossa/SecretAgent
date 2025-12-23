@@ -144,6 +144,12 @@ router.get('/selected/:playerId', (req, res) => {
 router.post('/complete', (req, res) => {
   const { playerId, involvedPlayerId } = req.body
 
+  // Check game state - only allow completions during active game
+  const gameState = db.prepare('SELECT status FROM game_state WHERE id = 1').get() as { status: string }
+  if (gameState.status !== 'active') {
+    return res.status(400).json({ error: 'Mission completions are only allowed during an active game' })
+  }
+
   if (!playerId || !involvedPlayerId) {
     return res.status(400).json({ error: 'Player ID and involved player ID required' })
   }

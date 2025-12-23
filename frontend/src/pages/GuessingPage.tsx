@@ -22,6 +22,11 @@ export default function GuessingPage() {
   const [guessInputs, setGuessInputs] = useState<Record<number, string>>({})
   const [justSubmitted, setJustSubmitted] = useState<number | null>(null)
 
+  const { data: gameState } = useQuery({
+    queryKey: ['gameState'],
+    queryFn: gameApi.getState,
+  })
+
   const { data: playersData, isLoading: playersLoading } = useQuery({
     queryKey: ['gamePlayers'],
     queryFn: gameApi.getPlayers,
@@ -57,6 +62,36 @@ export default function GuessingPage() {
         <div className="flex justify-center py-12">
           <Spinner size="lg" />
         </div>
+      </PageLayout>
+    )
+  }
+
+  // Show message if game hasn't started yet
+  if (gameState?.status === 'setup') {
+    return (
+      <PageLayout title="Guess Tells" showBack>
+        <Card className="text-center py-8">
+          <div className="text-4xl mb-3">⏳</div>
+          <p className="text-gray-600 font-medium">The game hasn't started yet!</p>
+          <p className="text-gray-500 text-sm mt-2">
+            Guessing will be available once the host starts the game.
+          </p>
+        </Card>
+      </PageLayout>
+    )
+  }
+
+  // Show message if game has ended
+  if (gameState?.status === 'finished') {
+    return (
+      <PageLayout title="Guess Tells" showBack>
+        <Card className="text-center py-8">
+          <div className="text-4xl mb-3">🎄</div>
+          <p className="text-gray-600 font-medium">The game has ended!</p>
+          <p className="text-gray-500 text-sm mt-2">
+            Check out the results page to see how everyone did.
+          </p>
+        </Card>
       </PageLayout>
     )
   }
@@ -221,15 +256,23 @@ export default function GuessingPage() {
             Others are trying to figure out your secret tell...
           </p>
           {guessesAboutMe?.guesses && guessesAboutMe.guesses.length > 0 ? (
-            <div className="space-y-2">
+            <div className="space-y-3">
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <span className="w-8 h-8 bg-christmas-red/10 text-christmas-red rounded-full flex items-center justify-center font-bold">
-                  {guessesAboutMe.guesses.reduce((sum: number, g: any) => sum + g.count, 0)}
+                  {guessesAboutMe.guesses.length}
                 </span>
                 <span>player(s) have guessed your tell</span>
               </div>
+              <div className="space-y-2 pt-2 border-t border-gray-100">
+                {guessesAboutMe.guesses.map((guess: any, index: number) => (
+                  <div key={index} className="flex items-start gap-2 text-sm">
+                    <span className="text-gray-400 flex-shrink-0">🔮</span>
+                    <span className="text-gray-600 italic">"{guess.guessText}"</span>
+                  </div>
+                ))}
+              </div>
               <p className="text-xs text-gray-400 italic">
-                Details revealed when the game ends!
+                Who guessed what is revealed when the game ends!
               </p>
             </div>
           ) : (

@@ -75,10 +75,16 @@ export default function DashboardPage() {
         <Card className="text-center bg-gradient-to-br from-white to-gray-50 border border-gray-100">
           <p className="text-gray-500 mb-1">Hello,</p>
           <h2 className="text-2xl font-bold text-christmas-red">{player?.name}! 👋</h2>
-          <div className="flex items-center justify-center gap-2 mt-2">
-            <span className="px-3 py-1 bg-christmas-red/10 text-christmas-red text-sm font-medium rounded-full">
-              Team {player?.team}
-            </span>
+          <div className="flex flex-col items-center gap-2 mt-2">
+            {gameState?.teamNames?.[player?.team || 0] ? (
+              <span className="px-4 py-2 bg-gradient-to-r from-christmas-gold/20 to-christmas-gold/10 text-christmas-gold border border-christmas-gold/30 text-sm font-bold rounded-full">
+                {gameState.teamNames[player?.team || 0]}
+              </span>
+            ) : (
+              <span className="px-3 py-1 bg-christmas-red/10 text-christmas-red text-sm font-medium rounded-full">
+                Team {player?.team}
+              </span>
+            )}
           </div>
         </Card>
 

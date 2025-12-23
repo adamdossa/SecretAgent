@@ -92,6 +92,7 @@ router.get('/scores', (req, res) => {
         WHERE target_player_id = ?
         AND guessed_tell_option_id != ?
       `).get(player.id, selectedTell.tell_option_id) as { count: number }
+      console.log("Lizzy look at me!!! ", wrongGuesses)
 
       const stealthBonus = Math.ceil(wrongGuesses.count / 2)
       if (stealthBonus > 0) {
@@ -115,6 +116,7 @@ router.get('/scores', (req, res) => {
       teamNamePoints = 2
       breakdown.push(`+2 winning team name`)
     }
+    console.log(player.name, breakdown);
 
     return {
       id: player.id,

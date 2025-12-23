@@ -42,7 +42,7 @@ export const authApi = {
 
 // Game API
 export const gameApi = {
-  getState: () => api.get<{ status: string; startedAt: string | null; endedAt: string | null }>('/game/state'),
+  getState: () => api.get<{ status: string; startedAt: string | null; endedAt: string | null; teamNames: Record<number, string> }>('/game/state'),
   getPlayers: () => api.get<{ players: any[] }>('/game/players'),
 }
 

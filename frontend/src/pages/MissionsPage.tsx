@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '../stores/authStore'
-import { missionsApi } from '../api/client'
+import { missionsApi, gameApi } from '../api/client'
 import PageLayout from '../components/layout/PageLayout'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
@@ -12,6 +12,11 @@ export default function MissionsPage() {
   const queryClient = useQueryClient()
   const [selectedOption, setSelectedOption] = useState<number | null>(null)
   const [selectedPlayer, setSelectedPlayer] = useState<number | null>(null)
+
+  const { data: gameState } = useQuery({
+    queryKey: ['gameState'],
+    queryFn: gameApi.getState,
+  })
 
   const { data: optionsData, isLoading: optionsLoading } = useQuery({
     queryKey: ['missionOptions', player?.id],
@@ -75,6 +80,10 @@ export default function MissionsPage() {
 
   // If already selected, show the mission and completion recording
   if (selectedData?.selected) {
+    const canRecordCompletions = gameState?.status === 'active'
+    const isGameFinished = gameState?.status === 'finished'
+    const isSetup = gameState?.status === 'setup'
+
     return (
       <PageLayout title="Your Secret Mission" showBack>
         <div className="space-y-4">
@@ -84,50 +93,78 @@ export default function MissionsPage() {
             <p className="text-gray-700 leading-relaxed">{selectedData.selected.missionText}</p>
           </Card>
 
-          <Card className="border border-gray-100">
-            <h3 className="font-bold text-gray-800 mb-2 flex items-center gap-2">
-              <span>📝</span> Record Completion
-            </h3>
-            <p className="text-sm text-gray-600 mb-3">
-              Who did you complete this mission with?
-            </p>
-
-            {availablePlayers?.players && availablePlayers.players.length > 0 ? (
-              <>
-                <div className="grid grid-cols-2 gap-2 mb-4">
-                  {availablePlayers.players.map((p: any) => (
-                    <button
-                      key={p.id}
-                      onClick={() => setSelectedPlayer(p.id)}
-                      className={`p-3 rounded-lg border-2 transition-all font-medium ${
-                        selectedPlayer === p.id
-                          ? 'border-christmas-green bg-christmas-green/10 text-christmas-green'
-                          : 'border-gray-200 hover:border-christmas-green/50'
-                      }`}
-                    >
-                      {p.name}
-                    </button>
-                  ))}
+          {/* Show status-based message */}
+          {isSetup && (
+            <Card className="border border-yellow-200 bg-yellow-50">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">⏳</span>
+                <div>
+                  <p className="font-medium text-yellow-800">Waiting for game to start</p>
+                  <p className="text-sm text-yellow-700">You can record completions once the host starts the game.</p>
                 </div>
-                <Button
-                  onClick={() => selectedPlayer && completeMutation.mutate(selectedPlayer)}
-                  loading={completeMutation.isPending}
-                  disabled={!selectedPlayer}
-                  variant="secondary"
-                  className="w-full"
-                >
-                  ✓ Record Completion
-                </Button>
-              </>
-            ) : (
-              <div className="text-center py-4">
-                <div className="text-4xl mb-2">🎉</div>
-                <p className="text-gray-600 font-medium">
-                  You've completed missions with everyone!
-                </p>
               </div>
-            )}
-          </Card>
+            </Card>
+          )}
+
+          {isGameFinished && (
+            <Card className="border border-gray-200 bg-gray-50">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">🎄</span>
+                <div>
+                  <p className="font-medium text-gray-700">Game has ended</p>
+                  <p className="text-sm text-gray-600">Check the results page to see how you did!</p>
+                </div>
+              </div>
+            </Card>
+          )}
+
+          {/* Only show completion recording during active game */}
+          {canRecordCompletions && (
+            <Card className="border border-gray-100">
+              <h3 className="font-bold text-gray-800 mb-2 flex items-center gap-2">
+                <span>📝</span> Record Completion
+              </h3>
+              <p className="text-sm text-gray-600 mb-3">
+                Who did you complete this mission with?
+              </p>
+
+              {availablePlayers?.players && availablePlayers.players.length > 0 ? (
+                <>
+                  <div className="grid grid-cols-2 gap-2 mb-4">
+                    {availablePlayers.players.map((p: any) => (
+                      <button
+                        key={p.id}
+                        onClick={() => setSelectedPlayer(p.id)}
+                        className={`p-3 rounded-lg border-2 transition-all font-medium ${
+                          selectedPlayer === p.id
+                            ? 'border-christmas-green bg-christmas-green/10 text-christmas-green'
+                            : 'border-gray-200 hover:border-christmas-green/50'
+                        }`}
+                      >
+                        {p.name}
+                      </button>
+                    ))}
+                  </div>
+                  <Button
+                    onClick={() => selectedPlayer && completeMutation.mutate(selectedPlayer)}
+                    loading={completeMutation.isPending}
+                    disabled={!selectedPlayer}
+                    variant="secondary"
+                    className="w-full"
+                  >
+                    ✓ Record Completion
+                  </Button>
+                </>
+              ) : (
+                <div className="text-center py-4">
+                  <div className="text-4xl mb-2">🎉</div>
+                  <p className="text-gray-600 font-medium">
+                    You've completed missions with everyone!
+                  </p>
+                </div>
+              )}
+            </Card>
+          )}
 
           <Card className="border border-christmas-gold/20 bg-gradient-to-br from-christmas-gold/10 to-white">
             <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
@@ -143,7 +180,7 @@ export default function MissionsPage() {
                 ))}
               </ul>
             ) : (
-              <p className="text-gray-500 text-sm">No completions yet - get started!</p>
+              <p className="text-gray-500 text-sm">No completions yet{canRecordCompletions ? ' - get started!' : '.'}</p>
             )}
           </Card>
         </div>

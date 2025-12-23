@@ -50,6 +50,45 @@ export default function AdminPage() {
 
   const { gameState, players, stats } = data!
 
+  // Show Christmas loading screen during AI transitions
+  if (startMutation.isPending) {
+    return (
+      <PageLayout title="Admin Panel">
+        <div className="flex flex-col items-center justify-center py-16">
+          <div className="text-6xl mb-6 animate-bounce">🎄</div>
+          <h2 className="text-xl font-bold text-gray-800 mb-3">Santa's Picking Team Names...</h2>
+          <p className="text-gray-600 text-center mb-6">
+            The elves are judging all the team name suggestions!
+          </p>
+          <div className="flex gap-2">
+            <div className="w-3 h-3 bg-christmas-red rounded-full animate-pulse"></div>
+            <div className="w-3 h-3 bg-christmas-green rounded-full animate-pulse" style={{ animationDelay: '0.1s' }}></div>
+            <div className="w-3 h-3 bg-christmas-gold rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+          </div>
+        </div>
+      </PageLayout>
+    )
+  }
+
+  if (endMutation.isPending) {
+    return (
+      <PageLayout title="Admin Panel">
+        <div className="flex flex-col items-center justify-center py-16">
+          <div className="text-6xl mb-6 animate-bounce">🎅</div>
+          <h2 className="text-xl font-bold text-gray-800 mb-3">Santa's Judging the Results...</h2>
+          <p className="text-gray-600 text-center mb-6">
+            Checking who's been naughty and nice with their guesses!
+          </p>
+          <div className="flex gap-2">
+            <div className="w-3 h-3 bg-christmas-red rounded-full animate-pulse"></div>
+            <div className="w-3 h-3 bg-christmas-green rounded-full animate-pulse" style={{ animationDelay: '0.1s' }}></div>
+            <div className="w-3 h-3 bg-christmas-gold rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+          </div>
+        </div>
+      </PageLayout>
+    )
+  }
+
   return (
     <PageLayout title="Admin Panel">
       <div className="space-y-4">

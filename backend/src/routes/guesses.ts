@@ -7,6 +7,12 @@ const router = Router()
 router.post('/submit', (req, res) => {
   const { guesserId, targetPlayerId, guessText } = req.body
 
+  // Check game state - only allow guesses during active game
+  const gameState = db.prepare('SELECT status FROM game_state WHERE id = 1').get() as { status: string }
+  if (gameState.status !== 'active') {
+    return res.status(400).json({ error: 'Guessing is only allowed during an active game' })
+  }
+
   if (!guesserId || !targetPlayerId || !guessText) {
     return res.status(400).json({ error: 'All fields required' })
   }
@@ -79,14 +85,11 @@ router.get('/about-me/:playerId', (req, res) => {
   const guesses = db.prepare(`
     SELECT
       tg.free_text_guess as guessText,
-      t.option_text as matchedText,
-      tg.guessed_tell_option_id IS NOT NULL as wasMatched,
-      COUNT(*) as count
+      tg.guessed_at as guessedAt
     FROM tell_guesses tg
-    LEFT JOIN tell_options t ON tg.guessed_tell_option_id = t.id
     WHERE tg.target_player_id = ?
-    GROUP BY tg.free_text_guess
-    ORDER BY count DESC
+    AND tg.free_text_guess IS NOT NULL
+    ORDER BY tg.guessed_at DESC
   `).all(playerId)
 
   res.json({ guesses })

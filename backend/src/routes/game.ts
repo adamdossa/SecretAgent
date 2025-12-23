@@ -8,16 +8,30 @@ interface GameState {
   status: 'setup' | 'active' | 'finished'
   started_at: string | null
   ended_at: string | null
-  winning_team_name_player_id: number | null
+  team_name_winners: string | null
 }
 
 router.get('/state', (req, res) => {
   const state = db.prepare('SELECT * FROM game_state WHERE id = 1').get() as GameState
 
+  // Parse team name winners
+  let teamNames: Record<number, string> = {}
+  if (state.team_name_winners) {
+    try {
+      const winners = JSON.parse(state.team_name_winners) as { team: number; suggestion: string }[]
+      for (const w of winners) {
+        teamNames[w.team] = w.suggestion
+      }
+    } catch (e) {
+      console.error('Failed to parse team_name_winners:', e)
+    }
+  }
+
   res.json({
     status: state.status,
     startedAt: state.started_at,
     endedAt: state.ended_at,
+    teamNames,
   })
 })
 
