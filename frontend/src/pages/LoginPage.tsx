@@ -118,6 +118,13 @@ export default function LoginPage() {
           </p>
         </div>
       </div>
+
+      {/* Footer */}
+      <div className="absolute bottom-4 left-0 right-0 text-center">
+        <p className="text-white/40 text-xs tracking-wide">
+          Made with <span className="text-red-300">♥</span> by Lizzy & Adam 🎄
+        </p>
+      </div>
     </div>
   )
 }
