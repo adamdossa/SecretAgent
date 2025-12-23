@@ -65,7 +65,7 @@ export default function LoginPage() {
             Secret Agents
           </h2>
           <p className="text-white/80 mt-3 text-sm">
-            Christmas 2024
+            Christmas 2025
           </p>
         </div>
 
