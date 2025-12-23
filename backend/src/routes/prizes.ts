@@ -83,21 +83,42 @@ router.get('/scores', (req, res) => {
       }
     }
 
-    // 2. Points for people who didn't guess your tell correctly
+    // 2. Stealth points for people who didn't guess your tell correctly or didn't guess at all
     const selectedTell = db.prepare('SELECT tell_option_id FROM selected_tells WHERE player_id = ?').get(player.id) as { tell_option_id: number } | undefined
 
     if (selectedTell) {
-      // Count wrong guesses: either NULL (judged incorrect) or different option ID
+      // Count other players (everyone except this player)
+      const totalOtherPlayers = db.prepare(
+        'SELECT COUNT(*) as count FROM players WHERE id != ?'
+      ).get(player.id) as { count: number }
+
+      // Count players who made any guess about this player
+      const playersWhoGuessed = db.prepare(`
+        SELECT COUNT(DISTINCT guesser_id) as count FROM tell_guesses
+        WHERE target_player_id = ?
+      `).get(player.id) as { count: number }
+
+      // Count incorrect guesses: either NULL (judged incorrect) or different option ID
       const wrongGuesses = db.prepare(`
         SELECT COUNT(*) as count FROM tell_guesses
         WHERE target_player_id = ?
         AND (guessed_tell_option_id IS NULL OR guessed_tell_option_id != ?)
       `).get(player.id, selectedTell.tell_option_id) as { count: number }
 
-      const stealthBonus = Math.ceil(wrongGuesses.count / 2)
+      // Players who didn't guess at all
+      const noGuessCount = totalOtherPlayers.count - playersWhoGuessed.count
+
+      // Stealth bonus: 1 point per incorrect guess, 0.5 points per no guess
+      const incorrectPoints = wrongGuesses.count
+      const noGuessPoints = noGuessCount * 0.5
+      const stealthBonus = incorrectPoints + noGuessPoints
+
       if (stealthBonus > 0) {
         tellPoints += stealthBonus
-        breakdown.push(`+${stealthBonus} stealth bonus (${wrongGuesses.count} wrong guesses)`)
+        const parts = []
+        if (wrongGuesses.count > 0) parts.push(`${wrongGuesses.count} wrong`)
+        if (noGuessCount > 0) parts.push(`${noGuessCount} no guess`)
+        breakdown.push(`+${stealthBonus} stealth (${parts.join(', ')})`)
       }
     }
 

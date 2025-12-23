@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
@@ -5,6 +6,63 @@ import { tellsApi, missionsApi, gameApi } from '../api/client'
 import PageLayout from '../components/layout/PageLayout'
 import Card from '../components/ui/Card'
 import Spinner from '../components/ui/Spinner'
+
+function ScoringGuide() {
+  const [isOpen, setIsOpen] = useState(false)
+
+  return (
+    <Card className="border border-gray-200">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between"
+      >
+        <h3 className="font-bold text-gray-700 flex items-center gap-2">
+          <span>🏆</span> How to Score
+        </h3>
+        <svg
+          className={`w-5 h-5 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      {isOpen && (
+        <div className="mt-3 pt-3 border-t border-gray-100 space-y-2 text-sm">
+          <div className="flex items-start gap-2">
+            <span className="text-christmas-gold">👁️</span>
+            <div>
+              <span className="font-medium text-gray-700">Guess tells</span>
+              <span className="text-gray-500"> — +1 each correct (+1/hour early bonus)</span>
+            </div>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="text-christmas-red">🕵️</span>
+            <div>
+              <span className="font-medium text-gray-700">Stay hidden</span>
+              <span className="text-gray-500"> — +1 per wrong guess, +0.5 per no guess</span>
+            </div>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="text-christmas-green">🎯</span>
+            <div>
+              <span className="font-medium text-gray-700">Complete missions</span>
+              <span className="text-gray-500"> — +1 per person</span>
+            </div>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="text-christmas-gold">✨</span>
+            <div>
+              <span className="font-medium text-gray-700">Best team name</span>
+              <span className="text-gray-500"> — +2 if yours wins</span>
+            </div>
+          </div>
+        </div>
+      )}
+    </Card>
+  )
+}
 
 export default function DashboardPage() {
   const { player } = useAuthStore()
@@ -193,6 +251,9 @@ export default function DashboardPage() {
               </p>
             </Card>
           )}
+
+          {/* Scoring Guide */}
+          <ScoringGuide />
         </div>
       </PageLayout>
     )
@@ -305,6 +366,9 @@ export default function DashboardPage() {
             </Card>
           </Link>
         </div>
+
+        {/* Scoring Guide */}
+        <ScoringGuide />
       </div>
     </PageLayout>
   )
