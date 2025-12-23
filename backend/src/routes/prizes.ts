@@ -1,7 +1,6 @@
 import { Router } from 'express'
 import { db } from '../config/database.js'
 import { requireOpenAI, MODELS } from '../config/openai.js'
-import { YOUNG_PLAYERS } from '../config/constants.js'
 
 const router = Router()
 
@@ -21,27 +20,30 @@ router.get('/scores', (req, res) => {
   const gameState = db.prepare('SELECT * FROM game_state WHERE id = 1').get() as {
     status: string
     ended_at: string | null
-    winning_team_name_player_id: number | null
+    team_name_winners: string | null
   }
 
   if (gameState.status !== 'finished') {
     return res.status(400).json({ error: 'Game not finished yet' })
   }
 
-  // Get team name winner info
-  let teamNameWinner = null
-  if (gameState.winning_team_name_player_id) {
-    teamNameWinner = db.prepare(`
-      SELECT p.id, p.name, p.team_number as team, p.team_name_suggestion as suggestion
-      FROM players p WHERE p.id = ?
-    `).get(gameState.winning_team_name_player_id) as { id: number; name: string; team: number; suggestion: string } | undefined
+  // Parse team name winners (one per team, 2 points each)
+  let teamNameWinners: { playerId: number; playerName: string; team: number; suggestion: string; reasoning: string }[] = []
+  if (gameState.team_name_winners) {
+    try {
+      teamNameWinners = JSON.parse(gameState.team_name_winners)
+    } catch (e) {
+      console.error('Failed to parse team_name_winners:', e)
+    }
   }
+  const winnerPlayerIds = new Set(teamNameWinners.map(w => w.playerId))
 
-  // Get all team name suggestions
+  // Get all team name suggestions grouped by team
   const allTeamNameSuggestions = db.prepare(`
     SELECT p.name, p.team_number as team, p.team_name_suggestion as suggestion
     FROM players p
     WHERE p.team_name_suggestion IS NOT NULL AND p.team_name_suggestion != ''
+    ORDER BY p.team_number, p.name
   `).all() as { name: string; team: number; suggestion: string }[]
 
   const players = db.prepare('SELECT id, name, team_number as team FROM players').all() as {
@@ -108,10 +110,10 @@ router.get('/scores', (req, res) => {
       breakdown.push(`+${missionPoints} mission completions`)
     }
 
-    // 4. Team name bonus
-    if (gameState.winning_team_name_player_id === player.id) {
-      teamNamePoints = 1
-      breakdown.push(`+1 winning team name`)
+    // 4. Team name bonus (2 points per team winner)
+    if (winnerPlayerIds.has(player.id)) {
+      teamNamePoints = 2
+      breakdown.push(`+2 winning team name`)
     }
 
     return {
@@ -145,7 +147,7 @@ router.get('/scores', (req, res) => {
   res.json({
     players: scores,
     teams: teamScores,
-    teamNameWinner,
+    teamNameWinners,
     allTeamNameSuggestions
   })
 })
@@ -206,92 +208,31 @@ router.get('/reveals', (req, res) => {
   res.json({ tells, missions, guesses })
 })
 
-// Get fun awards for all players
-router.get('/fun-awards', async (req, res) => {
+// Get fun awards (reads stored awards generated at game end)
+router.get('/fun-awards', (req, res) => {
+  const gameState = db.prepare('SELECT status, fun_awards FROM game_state WHERE id = 1').get() as {
+    status: string
+    fun_awards: string | null
+  }
+
+  if (gameState.status !== 'finished') {
+    return res.status(400).json({ error: 'Game not finished yet' })
+  }
+
+  if (!gameState.fun_awards) {
+    return res.json({ awards: [] })
+  }
+
   try {
-    const gameState = db.prepare('SELECT status FROM game_state WHERE id = 1').get() as { status: string }
-
-    if (gameState.status !== 'finished') {
-      return res.status(400).json({ error: 'Game not finished yet' })
-    }
-
-    // Get all player stats
-    const players = db.prepare('SELECT id, name, team_number as team FROM players').all() as {
-      id: number
-      name: string
-      team: number
-    }[]
-
-    const playerStats = players.map(player => {
-      // Get mission completions
-      const missionCount = db.prepare(
-        'SELECT COUNT(*) as count FROM mission_completions WHERE player_id = ?'
-      ).get(player.id) as { count: number }
-
-      // Get correct guesses
-      const correctGuesses = db.prepare(`
-        SELECT COUNT(*) as count
-        FROM tell_guesses tg
-        JOIN selected_tells st ON tg.target_player_id = st.player_id
-        WHERE tg.guesser_id = ? AND tg.guessed_tell_option_id = st.tell_option_id
-      `).get(player.id) as { count: number }
-
-      // Get how many people guessed their tell correctly
-      const selectedTell = db.prepare('SELECT tell_option_id FROM selected_tells WHERE player_id = ?').get(player.id) as { tell_option_id: number } | undefined
-      let fooledCount = 0
-      if (selectedTell) {
-        const wrongGuesses = db.prepare(`
-          SELECT COUNT(*) as count FROM tell_guesses
-          WHERE target_player_id = ? AND guessed_tell_option_id != ?
-        `).get(player.id, selectedTell.tell_option_id) as { count: number }
-        fooledCount = wrongGuesses.count
-      }
-
-      return {
-        ...player,
-        missionCount: missionCount.count,
-        correctGuesses: correctGuesses.count,
-        fooledCount,
-        isYoungPlayer: YOUNG_PLAYERS.includes(player.name)
-      }
-    })
-
-    // Generate fun awards
-    const prompt = `You are awarding fun, silly prizes at a family Christmas game night. Here are the player stats:
-
-${playerStats.map(p => `- ${p.name}: ${p.missionCount} missions completed, ${p.correctGuesses} correct guess(es), fooled ${p.fooledCount} people${p.isYoungPlayer ? ' (YOUNG PLAYER - give extra encouragement!)' : ''}`).join('\n')}
-
-Create fun awards for EVERY player. Make them humorous, festive, and positive. Awards for lower performers should be funny and celebratory, not mean.
-
-Young players (${YOUNG_PLAYERS.join(', ')}) should get especially encouraging awards.
-
-Respond with valid JSON:
-{
-  "awards": [
-    {"name": "PlayerName", "award": "Award Title", "reason": "Fun 1-sentence reason"}
-  ]
-}
-
-Make sure EVERY player gets exactly one award. Be creative and funny!`
-
-    const response = await requireOpenAI().chat.completions.create({
-      model: MODELS.text,
-      messages: [{ role: 'user', content: prompt }],
-      response_format: { type: 'json_object' },
-    })
-
-    const content = response.choices[0].message.content
-    if (!content) throw new Error('No response from OpenAI')
-
-    const result = JSON.parse(content)
-    res.json(result)
+    const awards = JSON.parse(gameState.fun_awards)
+    res.json({ awards })
   } catch (error) {
-    console.error('Error generating fun awards:', error)
-    res.status(500).json({ error: 'Failed to generate fun awards' })
+    console.error('Error parsing fun awards:', error)
+    res.json({ awards: [] })
   }
 })
 
-// Judge team names
+// Judge team names - one winner per team, 2 points each
 router.post('/judge-team-names', async (req, res) => {
   try {
     const suggestions = db.prepare(`
@@ -301,46 +242,81 @@ router.post('/judge-team-names', async (req, res) => {
     `).all() as { id: number; name: string; team: number; suggestion: string }[]
 
     if (suggestions.length === 0) {
-      return res.json({ winner: null, reasoning: 'No team name suggestions were made' })
+      return res.json({ winners: [], message: 'No team name suggestions were made' })
     }
 
-    const playerNames = suggestions.map(s => s.name)
-    const prompt = `You are a fun, fair judge for a family Christmas game.
+    // Group suggestions by team
+    const teamSuggestions: Record<number, typeof suggestions> = { 1: [], 2: [], 3: [] }
+    for (const s of suggestions) {
+      teamSuggestions[s.team].push(s)
+    }
 
-The family has suggested team names. Pick the BEST one based on:
+    const winners: { playerId: number; playerName: string; team: number; suggestion: string; reasoning: string }[] = []
+
+    // Judge each team separately
+    for (const teamNum of [1, 2, 3]) {
+      const teamEntries = teamSuggestions[teamNum]
+      if (teamEntries.length === 0) continue
+
+      // If only one suggestion for the team, they win by default
+      if (teamEntries.length === 1) {
+        winners.push({
+          playerId: teamEntries[0].id,
+          playerName: teamEntries[0].name,
+          team: teamNum,
+          suggestion: teamEntries[0].suggestion,
+          reasoning: 'The only suggestion for this team - winner by default!'
+        })
+        continue
+      }
+
+      // Multiple suggestions - let AI judge
+      const prompt = `You are a fun, fair judge for a family Christmas game.
+
+Team ${teamNum} has these team name suggestions:
+${teamEntries.map((s) => `- "${s.suggestion}" (by ${s.name})`).join('\n')}
+
+Pick the BEST team name based on:
 - Creativity and originality
 - How festive/Christmas-y it is
 - How fun and memorable it is
 - Cleverness or wordplay
 
-Suggestions:
-${suggestions.map((s) => `- "${s.suggestion}" (suggested by ${s.name} for Team ${s.team})`).join('\n')}
+Respond with valid JSON:
+{
+  "winnerName": "<exact name of the winner: ${teamEntries.map(s => s.name).join(' or ')}>",
+  "reasoning": "<A fun, humorous 1-2 sentence explanation of why this name won and why the others didn't quite make the cut>"
+}`
 
-You MUST respond with valid JSON containing exactly these fields:
-- "winnerName": Must be exactly one of these names: ${playerNames.join(', ')}
-- "reasoning": A 1-2 sentence explanation
+      const response = await requireOpenAI().chat.completions.create({
+        model: MODELS.text,
+        messages: [{ role: 'user', content: prompt }],
+        response_format: { type: 'json_object' },
+      })
 
-Example response: {"winnerName": "${playerNames[0]}", "reasoning": "This name was chosen because..."}`
-
-    const response = await requireOpenAI().chat.completions.create({
-      model: MODELS.text,
-      messages: [{ role: 'user', content: prompt }],
-      response_format: { type: 'json_object' },
-    })
-
-    const content = response.choices[0].message.content
-    if (!content) throw new Error('No response from OpenAI')
-
-    const result = JSON.parse(content)
-    const winner = suggestions.find((s) => s.name === result.winnerName)
-
-    if (winner) {
-      db.prepare('UPDATE game_state SET winning_team_name_player_id = ? WHERE id = 1').run(winner.id)
+      const content = response.choices[0].message.content
+      if (content) {
+        const result = JSON.parse(content)
+        const winner = teamEntries.find((s) => s.name === result.winnerName)
+        if (winner) {
+          winners.push({
+            playerId: winner.id,
+            playerName: winner.name,
+            team: teamNum,
+            suggestion: winner.suggestion,
+            reasoning: result.reasoning
+          })
+        }
+      }
     }
 
+    // Store winners in game_state
+    db.prepare('UPDATE game_state SET team_name_winners = ? WHERE id = 1').run(JSON.stringify(winners))
+
+    // Also return all suggestions grouped by team for display
     res.json({
-      winner: winner || null,
-      reasoning: result.reasoning,
+      winners,
+      allSuggestions: teamSuggestions
     })
   } catch (error) {
     console.error('Error judging team names:', error)

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { adminApi, prizesApi } from '../api/client'
+import { adminApi } from '../api/client'
 import PageLayout from '../components/layout/PageLayout'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
@@ -23,10 +23,7 @@ export default function AdminPage() {
   })
 
   const endMutation = useMutation({
-    mutationFn: async () => {
-      await prizesApi.judgeTeamNames()
-      await adminApi.endGame()
-    },
+    mutationFn: adminApi.endGame,
     onSuccess: () => {
       refetch()
       navigate('/prizes')

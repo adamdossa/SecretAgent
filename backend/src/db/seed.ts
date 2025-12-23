@@ -11,7 +11,7 @@ const FAMILY_MEMBERS = [
   { name: 'Alex', team: 3, isAdmin: false },
   { name: 'Neal', team: 1, isAdmin: false },
   { name: 'Ben', team: 2, isAdmin: false },
-  { name: 'Lizzy', team: 1, isAdmin: false },
+  { name: 'Lizzy', team: 1, isAdmin: true },
   { name: 'Jemima', team: 3, isAdmin: false },
   { name: 'Olivia', team: 3, isAdmin: false },
 ]

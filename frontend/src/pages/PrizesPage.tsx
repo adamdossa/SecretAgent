@@ -119,18 +119,29 @@ export default function PrizesPage() {
         {/* Scores Tab */}
         {activeTab === 'scores' && scoresData && (
           <div className="space-y-4">
-            {/* Team Name Winner */}
-            {scoresData.teamNameWinner && (
+            {/* Team Name Winners - one per team */}
+            {scoresData.teamNameWinners && scoresData.teamNameWinners.length > 0 && (
               <Card className="bg-gradient-to-br from-christmas-gold/20 to-white border border-christmas-gold/30">
-                <div className="text-center">
-                  <div className="text-3xl mb-2">🎉</div>
-                  <h3 className="font-bold text-gray-800 mb-1">Best Team Name Award</h3>
-                  <p className="text-christmas-gold font-bold text-lg mb-1">
-                    "{scoresData.teamNameWinner.suggestion}"
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    by {scoresData.teamNameWinner.name} (Team {scoresData.teamNameWinner.team})
-                  </p>
+                <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
+                  <span>🏆</span> Best Team Name Awards (+2 pts each)
+                </h3>
+                <div className="space-y-4">
+                  {scoresData.teamNameWinners.map((winner: any) => (
+                    <div key={winner.team} className="border-b border-christmas-gold/20 last:border-0 pb-3 last:pb-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs font-bold px-2 py-0.5 bg-christmas-gold/20 text-christmas-gold rounded">
+                          Team {winner.team}
+                        </span>
+                        <span className="font-bold text-gray-800">{winner.playerName}</span>
+                      </div>
+                      <p className="text-christmas-gold font-semibold">
+                        "{winner.suggestion}"
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1 italic">
+                        {winner.reasoning}
+                      </p>
+                    </div>
+                  ))}
                 </div>
               </Card>
             )}
@@ -141,15 +152,27 @@ export default function PrizesPage() {
                 <h4 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
                   <span>📝</span> All Team Name Suggestions
                 </h4>
-                <div className="space-y-2">
-                  {scoresData.allTeamNameSuggestions.map((s: any, i: number) => (
-                    <div key={i} className={`flex items-center justify-between py-1 ${
-                      s.suggestion === scoresData.teamNameWinner?.suggestion ? 'text-christmas-gold font-medium' : 'text-gray-600'
-                    }`}>
-                      <span className="text-sm">"{s.suggestion}"</span>
-                      <span className="text-xs text-gray-500">{s.name}</span>
-                    </div>
-                  ))}
+                <div className="space-y-3">
+                  {[1, 2, 3].map(teamNum => {
+                    const teamSuggestions = scoresData.allTeamNameSuggestions.filter((s: any) => s.team === teamNum)
+                    const winner = scoresData.teamNameWinners?.find((w: any) => w.team === teamNum)
+                    if (teamSuggestions.length === 0) return null
+                    return (
+                      <div key={teamNum}>
+                        <p className="text-xs font-bold text-gray-500 mb-1">Team {teamNum}</p>
+                        {teamSuggestions.map((s: any, i: number) => (
+                          <div key={i} className={`flex items-center justify-between py-1 ${
+                            winner?.suggestion === s.suggestion ? 'text-christmas-gold font-medium' : 'text-gray-600'
+                          }`}>
+                            <span className="text-sm">
+                              {winner?.suggestion === s.suggestion && '🏆 '}"{s.suggestion}"
+                            </span>
+                            <span className="text-xs text-gray-500">{s.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  })}
                 </div>
               </Card>
             )}

@@ -16,7 +16,8 @@ CREATE TABLE IF NOT EXISTS game_state (
     status TEXT NOT NULL DEFAULT 'setup' CHECK (status IN ('setup', 'active', 'finished')),
     started_at DATETIME,
     ended_at DATETIME,
-    winning_team_name_player_id INTEGER REFERENCES players(id)
+    team_name_winners TEXT, -- JSON array of {playerId, team, reasoning}
+    fun_awards TEXT -- JSON array of {name, award, reason}
 );
 
 -- Tell options: AI-generated options for each player

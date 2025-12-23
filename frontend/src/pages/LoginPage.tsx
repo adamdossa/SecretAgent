@@ -18,7 +18,7 @@ export default function LoginPage() {
 
   const playerOptions = FAMILY_MEMBERS.map((m) => ({
     value: m.name,
-    label: `${m.name} (${m.role})`,
+    label: `${m.emoji} ${m.name}`,
   }))
 
   const handleSubmit = async (e: React.FormEvent) => {

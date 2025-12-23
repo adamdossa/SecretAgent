@@ -85,8 +85,8 @@ export const adminApi = {
 
 // Prizes API
 export const prizesApi = {
-  getScores: () => api.get<{ players: any[]; teams: any[]; teamNameWinner: any; allTeamNameSuggestions: any[] }>('/prizes/scores'),
+  getScores: () => api.get<{ players: any[]; teams: any[]; teamNameWinners: any[]; allTeamNameSuggestions: any[] }>('/prizes/scores'),
   getReveals: () => api.get<{ tells: any[]; missions: any[]; guesses: any[] }>('/prizes/reveals'),
-  judgeTeamNames: () => api.post<{ winner: any; reasoning: string }>('/prizes/judge-team-names'),
+  judgeTeamNames: () => api.post<{ winners: any[]; allSuggestions: any }>('/prizes/judge-team-names'),
   getFunAwards: () => api.get<{ awards: { name: string; award: string; reason: string }[] }>('/prizes/fun-awards'),
 }

@@ -33,6 +33,12 @@ export default function GuessingPage() {
     enabled: !!player,
   })
 
+  const { data: guessesAboutMe } = useQuery({
+    queryKey: ['guessesAboutMe', player?.id],
+    queryFn: () => guessesApi.getAboutMe(player!.id),
+    enabled: !!player,
+  })
+
   const submitMutation = useMutation({
     mutationFn: ({ targetPlayerId, guessText }: { targetPlayerId: number; guessText: string }) =>
       guessesApi.submit(player!.id, targetPlayerId, guessText),
@@ -205,6 +211,31 @@ export default function GuessingPage() {
             ))}
           </div>
         )}
+
+        {/* Guesses about you */}
+        <Card className="border border-gray-100 bg-gradient-to-br from-gray-50 to-white">
+          <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
+            <span>👁️</span> Guesses About You
+          </h3>
+          <p className="text-xs text-gray-500 mb-3">
+            Others are trying to figure out your secret tell...
+          </p>
+          {guessesAboutMe?.guesses && guessesAboutMe.guesses.length > 0 ? (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <span className="w-8 h-8 bg-christmas-red/10 text-christmas-red rounded-full flex items-center justify-center font-bold">
+                  {guessesAboutMe.guesses.reduce((sum: number, g: any) => sum + g.count, 0)}
+                </span>
+                <span>player(s) have guessed your tell</span>
+              </div>
+              <p className="text-xs text-gray-400 italic">
+                Details revealed when the game ends!
+              </p>
+            </div>
+          ) : (
+            <p className="text-gray-500 text-sm">No one has guessed your tell yet - stay mysterious! 🕵️</p>
+          )}
+        </Card>
       </div>
     </PageLayout>
   )
