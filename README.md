@@ -36,6 +36,7 @@ The app will be available at **http://localhost:3000**
 - Select your name from the dropdown
 - Suggest a team name (optional, but fun!)
 - Enter the password: `Hughes2026`
+- The password is also the shared API bearer token (send `Authorization: Bearer <password>` for direct API calls)
 
 ### Secret Tell
 - Each player gets 3 AI-generated secret tells to choose from

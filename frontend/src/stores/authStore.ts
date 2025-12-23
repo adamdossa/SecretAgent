@@ -11,7 +11,8 @@ interface Player {
 interface AuthState {
   player: Player | null
   isLoggedIn: boolean
-  login: (player: Player) => void
+  token: string | null
+  login: (player: Player, token: string) => void
   logout: () => void
 }
 
@@ -20,8 +21,9 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       player: null,
       isLoggedIn: false,
-      login: (player) => set({ player, isLoggedIn: true }),
-      logout: () => set({ player: null, isLoggedIn: false }),
+      token: null,
+      login: (player, token) => set({ player, isLoggedIn: true, token }),
+      logout: () => set({ player: null, isLoggedIn: false, token: null }),
     }),
     {
       name: 'secret-agents-auth',

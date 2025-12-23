@@ -38,7 +38,7 @@ export default function LoginPage() {
     setLoading(true)
     try {
       const response = await authApi.login(name, password, teamNameSuggestion)
-      login(response.player)
+      login(response.player, password)
       navigate('/dashboard')
     } catch (err: any) {
       setError(err.message || 'Login failed')

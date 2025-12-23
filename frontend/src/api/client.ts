@@ -1,11 +1,23 @@
+import { useAuthStore } from '../stores/authStore'
+
 const API_BASE = '/api'
 
 async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  const token = useAuthStore.getState().token
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  }
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`
+  }
+
   const response = await fetch(`${API_BASE}${endpoint}`, {
-    headers: {
-      'Content-Type': 'application/json',
-    },
     ...options,
+    headers: {
+      ...headers,
+      ...(options?.headers || {}),
+    },
   })
 
   if (!response.ok) {
@@ -17,11 +29,12 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  get: <T>(endpoint: string) => request<T>(endpoint),
-  post: <T>(endpoint: string, body?: unknown) =>
+  get: <T>(endpoint: string, options?: RequestInit) => request<T>(endpoint, options),
+  post: <T>(endpoint: string, body?: unknown, options?: RequestInit) =>
     request<T>(endpoint, {
       method: 'POST',
       body: body ? JSON.stringify(body) : undefined,
+      ...options,
     }),
 }
 
@@ -30,7 +43,8 @@ export const authApi = {
   login: (name: string, password: string, teamNameSuggestion: string) =>
     api.post<{ success: boolean; player: { id: number; name: string; team: number; isAdmin: boolean } }>(
       '/auth/login',
-      { name, password, teamNameSuggestion }
+      { name, password, teamNameSuggestion },
+      { headers: { Authorization: `Bearer ${password}` } }
     ),
   logout: (playerId: number) => api.post('/auth/logout', { playerId }),
   getPlayers: () => api.get<{ players: { id: number; name: string; team: number }[] }>('/auth/players'),

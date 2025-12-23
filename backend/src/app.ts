@@ -3,6 +3,7 @@ import cors from 'cors'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { errorHandler } from './middleware/errorHandler.js'
+import { requireBearerToken } from './middleware/authToken.js'
 import authRoutes from './routes/auth.js'
 import gameRoutes from './routes/game.js'
 import tellsRoutes from './routes/tells.js'
@@ -19,6 +20,9 @@ export function createApp() {
   // Middleware
   app.use(cors())
   app.use(express.json())
+
+  // Shared bearer token protection for all API routes
+  app.use('/api', requireBearerToken)
 
   // API routes
   app.use('/api/auth', authRoutes)
