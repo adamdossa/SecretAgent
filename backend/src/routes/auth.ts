@@ -30,14 +30,24 @@ router.post('/login', (req, res) => {
     return res.status(404).json({ error: 'Player not found' })
   }
 
-  // Update login status and team name suggestion
-  db.prepare(`
-    UPDATE players
-    SET is_logged_in = 1,
-        logged_in_at = datetime('now'),
-        team_name_suggestion = ?
-    WHERE id = ?
-  `).run(teamNameSuggestion || null, player.id)
+  // Update login status
+  // Only update team_name_suggestion if a new one is provided (don't wipe existing)
+  if (teamNameSuggestion) {
+    db.prepare(`
+      UPDATE players
+      SET is_logged_in = 1,
+          logged_in_at = datetime('now'),
+          team_name_suggestion = ?
+      WHERE id = ?
+    `).run(teamNameSuggestion, player.id)
+  } else {
+    db.prepare(`
+      UPDATE players
+      SET is_logged_in = 1,
+          logged_in_at = datetime('now')
+      WHERE id = ?
+    `).run(player.id)
+  }
 
   res.json({
     success: true,

@@ -160,16 +160,19 @@ export default function PrizesPage() {
                     return (
                       <div key={teamNum}>
                         <p className="text-xs font-bold text-gray-500 mb-1">Team {teamNum}</p>
-                        {teamSuggestions.map((s: any, i: number) => (
+                        {teamSuggestions.map((s: any, i: number) => {
+                        const isWinner = winner?.playerName === s.name
+                        return (
                           <div key={i} className={`flex items-center justify-between py-1 ${
-                            winner?.suggestion === s.suggestion ? 'text-christmas-gold font-medium' : 'text-gray-600'
+                            isWinner ? 'text-christmas-gold font-medium' : 'text-gray-600'
                           }`}>
                             <span className="text-sm">
-                              {winner?.suggestion === s.suggestion && '🏆 '}"{s.suggestion}"
+                              {isWinner && '🏆 '}"{s.suggestion}"
                             </span>
                             <span className="text-xs text-gray-500">{s.name}</span>
                           </div>
-                        ))}
+                        )
+                      })}
                       </div>
                     )
                   })}

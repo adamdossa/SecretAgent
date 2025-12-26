@@ -1,4 +1,5 @@
 import { Router } from 'express'
+import PDFDocument from 'pdfkit'
 import { db } from '../config/database.js'
 import { requireOpenAI, MODELS } from '../config/openai.js'
 import { YOUNG_PLAYERS } from '../config/constants.js'
@@ -323,6 +324,226 @@ router.post('/restart', (req, res) => {
   `)
 
   res.json({ success: true })
+})
+
+// Generate PDF summary
+router.get('/pdf-summary', (req, res) => {
+  const gameState = db.prepare('SELECT * FROM game_state WHERE id = 1').get() as {
+    status: string
+    started_at: string | null
+    ended_at: string | null
+    team_name_winners: string | null
+    fun_awards: string | null
+  }
+
+  if (gameState.status !== 'finished') {
+    return res.status(400).json({ error: 'Game not finished yet' })
+  }
+
+  // Gather all data
+  const players = db.prepare('SELECT id, name, team_number as team FROM players ORDER BY team_number, name').all() as {
+    id: number
+    name: string
+    team: number
+  }[]
+
+  // Calculate scores for each player
+  const playerScores = players.map(player => {
+    let tellPoints = 0
+    let missionPoints = 0
+    let teamNamePoints = 0
+    const breakdown: string[] = []
+
+    // Correct guesses
+    const correctGuesses = db.prepare(`
+      SELECT COUNT(*) as count
+      FROM tell_guesses tg
+      JOIN selected_tells st ON tg.target_player_id = st.player_id
+      WHERE tg.guesser_id = ? AND tg.guessed_tell_option_id = st.tell_option_id
+    `).get(player.id) as { count: number }
+    if (correctGuesses.count > 0) {
+      tellPoints += correctGuesses.count
+      breakdown.push(`+${correctGuesses.count} correct guesses`)
+    }
+
+    // Stealth bonus
+    const selectedTell = db.prepare('SELECT tell_option_id FROM selected_tells WHERE player_id = ?').get(player.id) as { tell_option_id: number } | undefined
+    if (selectedTell) {
+      const totalOtherPlayers = db.prepare('SELECT COUNT(*) as count FROM players WHERE id != ?').get(player.id) as { count: number }
+      const playersWhoGuessed = db.prepare('SELECT COUNT(DISTINCT guesser_id) as count FROM tell_guesses WHERE target_player_id = ?').get(player.id) as { count: number }
+      const wrongGuesses = db.prepare(`
+        SELECT COUNT(*) as count FROM tell_guesses
+        WHERE target_player_id = ? AND (guessed_tell_option_id IS NULL OR guessed_tell_option_id != ?)
+      `).get(player.id, selectedTell.tell_option_id) as { count: number }
+      const noGuessCount = totalOtherPlayers.count - playersWhoGuessed.count
+      const stealthBonus = (wrongGuesses.count + noGuessCount) * 0.5
+      if (stealthBonus > 0) {
+        tellPoints += stealthBonus
+        breakdown.push(`+${stealthBonus} stealth bonus`)
+      }
+    }
+
+    // Missions
+    const missionCount = db.prepare('SELECT COUNT(*) as count FROM mission_completions WHERE player_id = ?').get(player.id) as { count: number }
+    missionPoints = missionCount.count
+    if (missionPoints > 0) {
+      breakdown.push(`+${missionPoints} missions`)
+    }
+
+    // Team name
+    const teamNameWinners = gameState.team_name_winners ? JSON.parse(gameState.team_name_winners) : []
+    if (teamNameWinners.some((w: any) => w.playerId === player.id)) {
+      teamNamePoints = 2
+      breakdown.push('+2 team name')
+    }
+
+    tellPoints = Math.ceil(tellPoints)
+    const totalPoints = Math.ceil(tellPoints + missionPoints + teamNamePoints)
+
+    return { ...player, tellPoints, missionPoints, teamNamePoints, totalPoints, breakdown }
+  }).sort((a, b) => b.totalPoints - a.totalPoints)
+
+  // Team scores
+  const teamScores = [1, 2, 3].map(teamNum => {
+    const teamPlayers = playerScores.filter(p => p.team === teamNum)
+    const totalPoints = teamPlayers.reduce((sum, p) => sum + p.totalPoints, 0)
+    return { team: teamNum, totalPoints, players: teamPlayers }
+  }).sort((a, b) => b.totalPoints - a.totalPoints)
+
+  // Team name winners
+  const teamNameWinners = gameState.team_name_winners ? JSON.parse(gameState.team_name_winners) : []
+
+  // Fun awards
+  const funAwards = gameState.fun_awards ? JSON.parse(gameState.fun_awards) : []
+
+  // Tells
+  const tells = db.prepare(`
+    SELECT p.name, t.option_text as tell
+    FROM players p
+    LEFT JOIN selected_tells st ON p.id = st.player_id
+    LEFT JOIN tell_options t ON st.tell_option_id = t.id
+    ORDER BY p.name
+  `).all() as { name: string; tell: string | null }[]
+
+  // Missions
+  const missions = db.prepare(`
+    SELECT p.name, m.option_text as mission,
+           (SELECT COUNT(*) FROM mission_completions WHERE player_id = p.id) as completions
+    FROM players p
+    LEFT JOIN selected_missions sm ON p.id = sm.player_id
+    LEFT JOIN mission_options m ON sm.mission_option_id = m.id
+    ORDER BY p.name
+  `).all() as { name: string; mission: string | null; completions: number }[]
+
+  // Guesses
+  const guesses = db.prepare(`
+    SELECT g.name as guesser, t.name as target, tg.free_text_guess as guess,
+           CASE WHEN st.tell_option_id = tg.guessed_tell_option_id THEN 1 ELSE 0 END as correct
+    FROM tell_guesses tg
+    JOIN players g ON tg.guesser_id = g.id
+    JOIN players t ON tg.target_player_id = t.id
+    LEFT JOIN selected_tells st ON tg.target_player_id = st.player_id
+    ORDER BY t.name, g.name
+  `).all() as { guesser: string; target: string; guess: string; correct: number }[]
+
+  // Create PDF
+  const doc = new PDFDocument({ margin: 50 })
+
+  res.setHeader('Content-Type', 'application/pdf')
+  res.setHeader('Content-Disposition', 'attachment; filename="silver-leigh-secret-agents-2025.pdf"')
+
+  doc.pipe(res)
+
+  // Helper functions
+  const sectionTitle = (title: string) => {
+    doc.moveDown(0.5)
+    doc.fontSize(16).fillColor('#c41e3a').text(title)
+    doc.moveDown(0.3)
+    doc.fillColor('#333')
+  }
+
+  const normalText = () => {
+    doc.fontSize(11).fillColor('#333')
+  }
+
+  // Title
+  doc.fontSize(28).fillColor('#c41e3a').text('Silver Leigh Secret Agents', { align: 'center' })
+  doc.fontSize(14).fillColor('#2e7d32').text('Christmas 2025 Game Summary', { align: 'center' })
+  doc.moveDown()
+
+  // Team Standings
+  sectionTitle('Team Standings')
+  teamScores.forEach((team, i) => {
+    const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'
+    normalText()
+    doc.text(`${medal} Team ${team.team}: ${team.totalPoints} points`)
+  })
+
+  // Individual Leaderboard
+  sectionTitle('Individual Leaderboard')
+  playerScores.forEach((player, i) => {
+    normalText()
+    const rank = i + 1
+    doc.text(`${rank}. ${player.name} - ${player.totalPoints} pts (${player.breakdown.join(', ') || 'no points'})`)
+  })
+
+  // Best Team Names
+  if (teamNameWinners.length > 0) {
+    sectionTitle('Best Team Name Awards (+2 pts each)')
+    teamNameWinners.forEach((winner: any) => {
+      normalText()
+      doc.text(`Team ${winner.team}: "${winner.suggestion}" by ${winner.playerName}`)
+      doc.fontSize(10).fillColor('#666').text(`  ${winner.reasoning}`)
+    })
+  }
+
+  // Fun Awards
+  if (funAwards.length > 0) {
+    doc.addPage()
+    sectionTitle('Fun Awards')
+    funAwards.forEach((award: any) => {
+      normalText()
+      doc.text(`${award.name}: ${award.award}`)
+      doc.fontSize(10).fillColor('#666').text(`  ${award.reason}`)
+    })
+  }
+
+  // Secret Tells
+  doc.addPage()
+  sectionTitle('Secret Tells Revealed')
+  tells.forEach(t => {
+    normalText()
+    doc.text(`${t.name}: ${t.tell || 'No tell selected'}`)
+  })
+
+  // Secret Missions
+  sectionTitle('Secret Missions')
+  missions.forEach(m => {
+    normalText()
+    doc.text(`${m.name}: ${m.mission || 'No mission selected'} (${m.completions}x completed)`)
+  })
+
+  // Guesses
+  sectionTitle('All Guesses')
+  const groupedByTarget: Record<string, typeof guesses> = {}
+  guesses.forEach(g => {
+    if (!groupedByTarget[g.target]) groupedByTarget[g.target] = []
+    groupedByTarget[g.target].push(g)
+  })
+  Object.entries(groupedByTarget).forEach(([target, targetGuesses]) => {
+    normalText()
+    doc.text(`${target}:`)
+    targetGuesses.forEach(g => {
+      const mark = g.correct ? '✓' : '✗'
+      doc.fontSize(10).fillColor(g.correct ? '#2e7d32' : '#666').text(`  ${mark} ${g.guesser}: "${g.guess}"`)
+    })
+  })
+
+  // Footer
+  doc.moveDown(2)
+  doc.fontSize(10).fillColor('#999').text('Made with ♥ by Lizzy & Adam', { align: 'center' })
+
+  doc.end()
 })
 
 export default router

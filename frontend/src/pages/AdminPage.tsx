@@ -188,6 +188,16 @@ export default function AdminPage() {
               </Button>
             )}
 
+            {gameState.status === 'finished' && (
+              <a
+                href="/api/admin/pdf-summary"
+                download
+                className="block w-full py-2.5 px-4 rounded-lg font-medium text-center transition-colors bg-christmas-green text-white hover:bg-christmas-green/90"
+              >
+                Download PDF Summary
+              </a>
+            )}
+
             <Button
               onClick={() => setShowConfirm('restart')}
               variant="danger"
