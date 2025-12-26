@@ -12,7 +12,10 @@
       "Bash(python3:*)",
       "Bash(pkill:*)",
       "Bash(npx tsc --noEmit)",
-      "Bash(npx tsx:*)"
+      "Bash(npx tsx:*)",
+      "Bash(node -e \"import\\(''pdfkit''\\).then\\(m => console.log\\(''PDFKit imported:'', typeof m.default\\)\\)\")",
+      "Bash(node -e:*)",
+      "Bash(node:*)"
     ]
   }
 }

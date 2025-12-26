@@ -474,9 +474,9 @@ router.get('/pdf-summary', (req, res) => {
   // Team Standings
   sectionTitle('Team Standings')
   teamScores.forEach((team, i) => {
-    const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'
+    const medal = i === 0 ? '1st' : i === 1 ? '2nd' : '3rd'
     normalText()
-    doc.text(`${medal} Team ${team.team}: ${team.totalPoints} points`)
+    doc.text(`${medal} Place - Team ${team.team}: ${team.totalPoints} points`)
   })
 
   // Individual Leaderboard
@@ -534,14 +534,14 @@ router.get('/pdf-summary', (req, res) => {
     normalText()
     doc.text(`${target}:`)
     targetGuesses.forEach(g => {
-      const mark = g.correct ? '✓' : '✗'
+      const mark = g.correct ? '[CORRECT]' : '[X]'
       doc.fontSize(10).fillColor(g.correct ? '#2e7d32' : '#666').text(`  ${mark} ${g.guesser}: "${g.guess}"`)
     })
   })
 
   // Footer
   doc.moveDown(2)
-  doc.fontSize(10).fillColor('#999').text('Made with ♥ by Lizzy & Adam', { align: 'center' })
+  doc.fontSize(10).fillColor('#999').text('Made with love by Lizzy & Adam', { align: 'center' })
 
   doc.end()
 })

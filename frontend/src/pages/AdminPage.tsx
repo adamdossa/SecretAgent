@@ -189,13 +189,15 @@ export default function AdminPage() {
             )}
 
             {gameState.status === 'finished' && (
-              <a
-                href="/api/admin/pdf-summary"
-                download
-                className="block w-full py-2.5 px-4 rounded-lg font-medium text-center transition-colors bg-christmas-green text-white hover:bg-christmas-green/90"
+              <Button
+                onClick={() => {
+                  window.open('/api/admin/pdf-summary', '_blank')
+                }}
+                variant="secondary"
+                className="w-full"
               >
                 Download PDF Summary
-              </a>
+              </Button>
             )}
 
             <Button
