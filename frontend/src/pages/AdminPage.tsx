@@ -38,6 +38,10 @@ export default function AdminPage() {
     },
   })
 
+  const pdfMutation = useMutation({
+    mutationFn: adminApi.downloadPdfSummary,
+  })
+
   if (isLoading) {
     return (
       <PageLayout title="Admin Panel">
@@ -190,9 +194,8 @@ export default function AdminPage() {
 
             {gameState.status === 'finished' && (
               <Button
-                onClick={() => {
-                  window.open('/api/admin/pdf-summary', '_blank')
-                }}
+                onClick={() => pdfMutation.mutate()}
+                loading={pdfMutation.isPending}
                 variant="secondary"
                 className="w-full"
               >

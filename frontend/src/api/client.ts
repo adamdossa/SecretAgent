@@ -95,6 +95,25 @@ export const adminApi = {
   startGame: () => api.post('/admin/start-game'),
   endGame: () => api.post('/admin/end-game'),
   restart: () => api.post('/admin/restart'),
+  downloadPdfSummary: async () => {
+    const token = useAuthStore.getState().token
+    const response = await fetch(`${API_BASE}/admin/pdf-summary`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Download failed' }))
+      throw new Error(error.error || 'Download failed')
+    }
+    const blob = await response.blob()
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'silver-leigh-secret-agents-2025.pdf'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.URL.revokeObjectURL(url)
+  },
 }
 
 // Prizes API
